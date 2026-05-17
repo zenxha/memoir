@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.crt
+*.key
+packages/server/data/media/
+packages/server/data/*.db*
+server.log
+.DS_Store

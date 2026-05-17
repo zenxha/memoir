@@ -1,0 +1,11 @@
+{
+  "name": "memoir",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
