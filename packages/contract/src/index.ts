@@ -127,7 +127,7 @@ export const contract = c.router({
       method: 'GET',
       path: '/api/media/:filename',
       pathParams: z.object({ filename: z.string() }),
-      responses: { 200: c.otherResponse({ contentType: 'application/octet-stream' }) },
+      responses: { 200: c.otherResponse({ contentType: 'application/octet-stream', body: z.unknown() }) },
     },
   }),
 });
