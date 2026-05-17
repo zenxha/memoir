@@ -22,6 +22,13 @@ async function bootstrap() {
   app.useWebSocketAdapter(new WsAdapter(app));
   app.enableCors({ origin: '*' });
 
+  // Inject runtime config for frontends
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.get('/config.js', (_req: any, res: any) => {
+    res.type('application/javascript');
+    res.send(`window.__CONFIG__ = ${JSON.stringify({ mapboxToken: process.env.MAPBOX_TOKEN ?? '' })};`);
+  });
+
   const port = process.env.PORT ?? 3000;
   const host = process.env.TAILSCALE_HOSTNAME ?? process.env.TAILSCALE_IP ?? 'localhost';
   const proto = useHttps ? 'https' : 'http';
