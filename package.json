@@ -2,7 +2,7 @@
   "name": "memoir",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel -r dev",
+    "dev": "pnpm --parallel -r --if-present dev",
     "build": "pnpm -r build"
   },
   "devDependencies": {
