@@ -6,7 +6,8 @@ import react from '@vitejs/plugin-react';
 const serverOrigin = process.env.MEMOIR_SERVER_URL ?? 'http://localhost:3000';
 const wsOrigin = serverOrigin.replace(/^http/, 'ws');
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/desktop/' : '/',
   plugins: [react()],
   server: {
     port: 5173,
@@ -16,4 +17,4 @@ export default defineConfig({
       '/ws':        { target: wsOrigin, ws: true, secure: false },
     },
   },
-});
+}));
