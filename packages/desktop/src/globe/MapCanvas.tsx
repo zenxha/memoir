@@ -63,16 +63,21 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
     mapRef.current = map;
 
     map.on('load', () => {
-      // Atmosphere — warm rim matching the design's globe-atmos
+      // Atmosphere — warm amber glow suggests city light bleeding into the limb
       (map as any).setFog({
-        color:            'rgb(10, 8, 14)',
-        'high-color':     'rgb(6, 4, 10)',
-        'horizon-blend':  0.04,
+        color:            'rgb(14, 10, 6)',
+        'high-color':     'rgb(8, 6, 4)',
+        'horizon-blend':  0.05,
         'space-color':    'rgb(4, 3, 7)',
         'star-intensity': 0.0,
       });
 
-      // Sweep all style layers — push dark-v11 to the near-black Cosmographic Atlas palette
+      // City-lights style sweep:
+      //   land  = dark warm brown  (not cold black — faint warmth of earth at night)
+      //   water = cool near-black  (oceans absorb light)
+      //   roads = amber traces     (streetlights; only visible zoomed in, but add warmth to urban fills)
+      //   admin = barely visible borders
+      //   labels = country/ocean names only, very dim
       const set = (id: string, p: string, v: unknown) => {
         try { (map as any).setPaintProperty(id, p, v); } catch (_) {}
       };
@@ -81,24 +86,37 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
         if (id.startsWith('entries-')) continue;
         switch (layer.type) {
           case 'background':
-            set(id, 'background-color', '#06040a');
+            set(id, 'background-color', '#08060a');
             break;
           case 'fill':
-            // water slightly purple, everything else near-black
-            set(id, 'fill-color', id.includes('water') ? '#0c0a14' : '#080610');
-            set(id, 'fill-opacity', id.includes('hillshade') ? 0 : 0.95);
+            if (id.includes('hillshade')) { set(id, 'fill-opacity', 0); break; }
+            if (id.includes('water'))     { set(id, 'fill-color', '#04030a'); set(id, 'fill-opacity', 1); break; }
+            // urban/landuse slightly warmer — simulates diffuse city glow
+            if (id.includes('urban') || id.includes('landuse') || id.includes('land-use')) {
+              set(id, 'fill-color', '#100c06'); break;
+            }
+            // base land: very dark warm brown
+            set(id, 'fill-color', '#0a0804');
+            set(id, 'fill-opacity', 0.95);
             break;
           case 'line':
             if (id.includes('admin') || id.includes('boundary') || id.includes('border')) {
-              set(id, 'line-color', '#1c1924');
-              set(id, 'line-opacity', id.includes('-0-') ? 0.45 : 0.2);
+              set(id, 'line-color', '#1a1510');
+              set(id, 'line-opacity', id.includes('-0-') ? 0.4 : 0.15);
+            } else if (
+              id.includes('road') || id.includes('street') ||
+              id.includes('motorway') || id.includes('trunk') || id.includes('rail')
+            ) {
+              // amber road traces — city lights effect
+              set(id, 'line-color', '#c8841a');
+              set(id, 'line-opacity', 0.12);
             } else {
               set(id, 'line-opacity', 0);
             }
             break;
           case 'symbol':
-            set(id, 'text-color', '#3d3848');
-            set(id, 'text-opacity', id.includes('country') || id.includes('ocean') || id.includes('marine') ? 0.35 : 0);
+            set(id, 'text-color', '#3d3020');
+            set(id, 'text-opacity', id.includes('country') || id.includes('ocean') || id.includes('marine') ? 0.3 : 0);
             set(id, 'icon-opacity', 0);
             break;
         }
