@@ -25,7 +25,15 @@ export function AudioRecorder({ position, onSave, onCancel }: Props) {
     let audioCtx: AudioContext;
     let animId: number;
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation:   false,
+        noiseSuppression:   false,
+        autoGainControl:    false,
+        channelCount:       1,
+        sampleRate:         44100,
+      },
+    }).then(stream => {
       audioCtx = new AudioContext();
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
