@@ -17,6 +17,7 @@ export function App() {
   const [wsOnline, setWsOnline] = useState(false);
   const [filter, setFilter]     = useState<string>('all');
   const [surface, setSurface]   = useState<Surface>('atlas');
+  const [newEntry, setNewEntry] = useState<Entry | null>(null);
 
   const loadEntries = useCallback(async (type = filter) => {
     const res = await api.entries.list({ query: { limit: 1000, ...(type !== 'all' ? { type } : {}) } });
@@ -32,7 +33,7 @@ export function App() {
 
   useEffect(() => {
     const handleWs = (msg: WsMessage) => {
-      if (msg.type === 'entry:new')     { setEntries(p => [msg.payload, ...p]); loadSessions(); }
+      if (msg.type === 'entry:new')     { setEntries(p => [msg.payload, ...p]); loadSessions(); setNewEntry(msg.payload); }
       if (msg.type === 'entry:updated') setEntries(p => p.map(e => e.id === msg.payload.id ? msg.payload : e));
       if (msg.type === 'entry:deleted') setEntries(p => p.filter(e => e.id !== msg.payload.id));
     };
@@ -65,21 +66,29 @@ export function App() {
     <AppShell layout="default" style={{ height: '100vh', background: 'var(--ink-000)' }}>
       <CommandPalette entries={entries} onSurface={setSurface} onEntry={setSelected} />
 
+      <style>{`
+        .surface-fade { animation: sfade 300ms ease both; }
+        @keyframes sfade { from { opacity: 0 } to { opacity: 1 } }
+      `}</style>
+
       {surface === 'roll' ? (
-        <RollSurface
-          entries={entries}
-          sessions={sessions}
-          surface={surface}
-          onSurface={setSurface}
-          onEntryClick={setSelected}
-        />
+        <div key="roll" className="surface-fade" style={{ position: 'absolute', inset: 0 }}>
+          <RollSurface
+            entries={entries}
+            sessions={sessions}
+            surface={surface}
+            onSurface={setSurface}
+            onEntryClick={setSelected}
+          />
+        </div>
       ) : (
-        <Box style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
+        <Box key="globe" className="surface-fade" style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
           <Box style={{ flex: 1, position: 'relative' }}>
             <MapCanvas
               entries={entries}
               onEntryClick={setSelected}
               onModeChange={() => {}}
+              newEntry={newEntry}
             />
           </Box>
 

@@ -29,12 +29,13 @@ const STAR_BG = [
 ].join(', ');
 
 interface Props {
-  entries: Entry[];
-  onEntryClick: (entry: Entry) => void;
+  entries:       Entry[];
+  onEntryClick:  (entry: Entry) => void;
   onModeChange?: (mode: 'globe' | 'map') => void;
+  newEntry?:     Entry | null;
 }
 
-export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
+export function MapCanvas({ entries, onEntryClick, onModeChange, newEntry }: Props) {
   const containerRef  = useRef<HTMLDivElement>(null);
   const mapRef        = useRef<mapboxgl.Map | null>(null);
   const entriesRef    = useRef<Entry[]>(entries);
@@ -142,8 +143,24 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
         }
       }
 
+      // Entrance rotation: 4° over 1.2s on open
+      map.easeTo({ bearing: 4, duration: 1200, easing: t => t * (2 - t) });
+
       // Entry dots source + two layers: glow halo + sharp dot
       map.addSource('entries', { type: 'geojson', data: toGeoJSON([]) });
+
+      // Pulse source for live-arrival animation
+      map.addSource('pulse', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({
+        id: 'pulse-ring', type: 'circle', source: 'pulse',
+        paint: {
+          'circle-radius':  0,
+          'circle-color':   ['get', 'color'],
+          'circle-opacity': 0.6,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': ['get', 'color'],
+        },
+      });
 
       map.addLayer({
         id:     'entries-glow',
@@ -221,6 +238,37 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
     const src = mapRef.current?.getSource('entries') as mapboxgl.GeoJSONSource | undefined;
     src?.setData(toGeoJSON(entries));
   }, [entries]);
+
+  // Live-arrival pulse: 2.6s ember ring expanding outward
+  useEffect(() => {
+    if (!newEntry || newEntry.lat == null || newEntry.lng == null) return;
+    const map = mapRef.current;
+    if (!map) return;
+
+    const color = TYPE_COLOR[newEntry.type] ?? '#ffffff';
+    const feature: GeoJSON.Feature = {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [newEntry.lng, newEntry.lat] },
+      properties: { color },
+    };
+    const src = map.getSource('pulse') as mapboxgl.GeoJSONSource;
+    src?.setData({ type: 'FeatureCollection', features: [feature] });
+
+    const start = performance.now();
+    const DURATION = 2600;
+    const animatePulse = (now: number) => {
+      const t = Math.min((now - start) / DURATION, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      try {
+        (map as any).setPaintProperty('pulse-ring', 'circle-radius', ease * 40);
+        (map as any).setPaintProperty('pulse-ring', 'circle-opacity', (1 - t) * 0.6);
+        (map as any).setPaintProperty('pulse-ring', 'circle-stroke-color', color);
+      } catch (_) {}
+      if (t < 1) requestAnimationFrame(animatePulse);
+      else src?.setData({ type: 'FeatureCollection', features: [] });
+    };
+    requestAnimationFrame(animatePulse);
+  }, [newEntry]);
 
   // Stars fade from fully visible at zoom ≤ 2 to gone by zoom 5
   const starOpacity = Math.max(0, Math.min(0.65, (5 - zoom) / 3 * 0.65));
