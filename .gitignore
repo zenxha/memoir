@@ -7,3 +7,4 @@ packages/server/data/media/
 packages/server/data/*.db*
 server.log
 .DS_Store
+docs/roadmap.md
