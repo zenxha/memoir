@@ -8,7 +8,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "paths": {
-      "@memoir/contract": ["../contract/src/index.ts"]
+      "@memoir/contract": ["../contract/dist/index.d.ts"]
     }
   },
   "include": ["src"]

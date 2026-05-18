@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --parallel -r --if-present dev",
-    "build": "pnpm -r build",
+    "build": "pnpm --filter @memoir/contract build && pnpm -r --filter=!@memoir/contract build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "e2e": "playwright test",
