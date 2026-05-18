@@ -25,18 +25,33 @@ Operations:
 
 No auth, no production exposure — strictly local dev convenience.
 
-## Phase 2 — Import + offline maps
-- Google Takeout import (Location History → moments, Photos → photos, YouTube Music → music_title)
-- Local OSM tile cache so the map works without an internet connection
-- Bulk-edit / merge / dedupe imported entries
+## Phase 2 — Ambient capture (server-side, no app changes)
+- **Last.fm polling daemon** — OAuth once, server cron every 10 min hits `user.getRecentTracks`, dedups, auto-creates music entries. Covers Spotify / Apple Music / anything that scrobbles. Server-side only; no mobile changes.
+- **Syncthing photo ingest** — Syncthing on Android (`/DCIM` → home server folder). Server watches the folder, reads EXIF (timestamp + GPS), creates `photo` entries that reference the file in place. Memoir becomes the **context layer** around the photo; Google Photos / native gallery remain the storage / browsing primary.
+- **Google Takeout import** — historical backfill (Location History → moments, old photos → photos).
+- **Local OSM tile cache** — map works without internet.
+- **Bulk-edit / merge / dedupe** for imported entries.
 
-## Phase 3 — Reflection surfaces
+## Phase 2.5 — Hardware checkpoint
+- Decide on dedicated server hardware (Mac Mini / Pi / NAS) once running on laptop becomes the bottleneck.
+- Until then: server runs on laptop, reached via Tailscale. Known limitation: captures only sync when laptop is awake + reachable.
+- Backup story (restic → Backblaze B2) lands with hardware decision, not before.
+
+## Phase 3 — Native shell (only if ambient capture proves itself)
+Checkpoint after Phase 2 runs in production for ~1 month. Decide whether ambient music + Syncthing photos make the archive *feel alive*. If yes, Capacitor wrap unlocks:
+- Background location (significant changes + activity recognition for visit detection on Android)
+- Background audio capture (current PWA dies on screen lock)
+- Native share extension (share to Memoir from any app)
+- `MediaStore` content observer for instant photo entries
+
+If the archive already feels rich without it, skip and stay PWA.
+
+## Phase 4 — Reflection surfaces
 - Terrain timeline (3D elevation-as-time visualization, designer-led)
 - Audio wall (chronological grid of all voice memos with inline playback)
-- Whisper UI (correct transcripts, search transcripts)
-- Music history import (Spotify/Apple Music play history → entries)
+- Whisper UI (correct transcripts, full-text search across transcripts)
 
-## Phase 4 — Outbound
+## Phase 5 — Outbound
 - Export: JSON, GPX, ZIP-of-media, Markdown digest
 - Full-text search across transcripts, titles, bodies, tags
 - Tag suggestions (local LLM)
