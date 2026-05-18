@@ -1,166 +1,147 @@
 # Memoir Mobile — Design Brief
 
-## Context
+## What we're asking for
 
-This brief covers the **mobile capture surface** only. The desktop atlas (Cosmographic Atlas design system) is already implemented — see `docs/design/proposal.html` for the full desktop spec. The mobile should feel like it belongs to the same family: same palette, same typography, but adapted for one-handed field use.
+A **complete mobile app design** for Memoir — not just the capture surface. The mobile app should do everything the desktop does, adapted for a phone screen. Capture, browse, reflect, search — all of it, on one device, in your pocket.
 
-The mobile app is currently a functional PWA with unstyled Mantine components. It works; it doesn't feel like anything yet. This brief asks you to give it a feeling.
-
----
-
-## What this surface does
-
-The user opens the app in the middle of living their life — on a walk, at a café, on a train — captures something in under 10 seconds, and closes it. That is the entire use case. The mobile app is **not** a browsing or reflection surface. It is the mouth of the archive.
-
-The only question it ever asks is: *what just happened?*
+We are asking for **multiple wireframe candidates** (at least two distinct directions). We want to see different structural approaches before committing to one. Each candidate should cover the full app, not just one screen.
 
 ---
 
-## The four capture types
+## Reference apps (for inspiration, not imitation)
 
-| Type | What it is | How it works today |
-|---|---|---|
-| **Audio** | Voice memo — record + auto-transcribe later | Tap Audio → waveform appears + timer → tap Stop → saved |
-| **Photo** | A photo from camera or roll | Tap Photo → native file picker / camera → saved |
-| **Moment** | A location-tagged point, no media | Tap Moment → saved instantly with GPS + weather |
-| **Note** | A text thought | Not yet surfaced in the UI — field exists in the schema, needs a capture path |
+**Google Recorder** — the gold standard for ambient audio capture on mobile. Notice: how it handles a recording in progress without getting in the way; how the transcript appears alongside the waveform; how the list of recordings is deceptively simple but scales to hundreds; how the waveform doubles as a scrubber.
 
-All four types share: GPS coordinates, timestamp, weather snapshot (fetched server-side), and optional music context.
+**Google Photos** — the gold standard for a personal visual archive. Notice: the gravity of the grid (you feel the density of your own history); the date-grouped sticky headers; the year scrubber on the right; how a single photo takeover feels full and calm; the contextual clustering ("Tokyo · May 2026").
+
+Memoir is neither of these. It has more data types (audio, photo, moment, note + music + weather + location), a stronger visual identity (Cosmographic Atlas palette — dark, warm, atmospheric), and a spatial/temporal dual nature that neither app attempts. But these two apps have solved capture UX and archive grid UX better than anyone. The designer should understand why they work before departing from them.
 
 ---
 
-## What the app knows automatically
+## What Memoir mobile needs to do
 
-Since the last design brief, ambient capture has been added:
+### 1. Capture (already partially designed)
+The user opens the app in the field, captures something in under 10 seconds, closes it. Four types: audio, photo, moment, note. The capture bar should always be accessible — one thumb, under 2 taps, no hunting.
 
-- **Last.fm / Spotify integration** — the server polls every 10 min and imports recent scrobbles as `moment` entries. The app always knows what music was playing.
-- **Now playing** — the server polls every 30s and shows a real-time "now playing" card (track + artist). This should be visible in the capture UI so the user can see what's being automatically tagged to their moment.
-- **GPS** — always running while the app is open. Location accuracy shown.
-- **Weather** — fetched server-side on every capture. User never inputs it.
+### 2. Browse the archive
+The full archive — all entry types, all time, all locations — browsable on a phone screen. The desktop has three surfaces: Sky (globe), Atlas (day-grouped list with sidebar), Roll (photo grid). The mobile equivalent doesn't need to replicate these three labels but should cover the same browsing modes:
+- **Temporal** — scroll through time, see what I captured when
+- **Spatial** — where have I been, what's clustered in a place
+- **Visual** — the photos, in a grid, as density
 
-So by the time the user taps "Moment", the app already knows: *where, when, what's playing, what the weather is.* The moment is pre-contextualised. The gesture is just confirmation.
+### 3. View a single entry
+Full-screen takeover per the Cosmographic Atlas spec (already designed on desktop). On mobile, the four type-specific layouts (audio waveform + transcript, photo full-bleed, moment map crop, note large serif) need to adapt to portrait orientation and touch navigation (swipe left/right to flip entries).
+
+### 4. Now playing (ambient)
+The server is always polling Last.fm. Whatever is currently playing should be unobtrusively visible — it's contextual information that doesn't require interaction.
+
+### 5. Search / ⌘K equivalent
+On mobile, the command palette becomes a search sheet. Tap to open, type to find — entries, places, songs, dates.
 
 ---
 
-## Current UI structure (what to redesign)
+## The Cosmographic Atlas design system
+
+The mobile must feel like the same product as the desktop. The designer should work within:
+
+```
+Palette:
+  --ink-000: #07060a    deep space / screen background
+  --ink-050: #0c0a10    page background
+  --ink-100: #131119    surface
+  --ink-300: #2a2632    border
+  --paper-900: #f3ece0  warm parchment / primary text
+  --paper-500: #8a8377  secondary text
+  --paper-400: #6a6358  tertiary / metadata
+
+Entry type colors (ember):
+  audio:  oklch(72% 0.13 250)  periwinkle
+  photo:  oklch(78% 0.13 55)   amber
+  moment: oklch(74% 0.10 145)  sage
+  note:   oklch(74% 0.10 15)   dusty rose
+  live:   oklch(76% 0.16 35)   ember / now-playing
+
+Typography:
+  Display:  Instrument Serif (italic, headings, entry titles)
+  UI:       Geist (body, labels, buttons)
+  Metadata: JetBrains Mono (timestamps, coordinates, counts)
+```
+
+Film grain overlay at 55% opacity (mix-blend-mode: overlay) on all surfaces.
+
+---
+
+## The note-taking problem
+
+Notes are the only capture type that ask the user to produce something. A plain text input box is explicitly the wrong answer — by the time a keyboard opens, the moment has passed.
+
+The designer should propose an interaction that keeps note capture as fast as the other types. Directions to consider:
+
+- **Constrained fragments** — not a blank canvas, but a word, a mood, a fragment. "Something about the light" is a valid note.
+- **Voice-to-note** — speak it, Whisper transcribes it, transcript becomes the note body. The pipeline already exists.
+- **Seeded template** — the app pre-fills location + weather + now-playing; the user adds one line.
+- **Deferred** — capture a location-tagged intent now, write the body later from desktop.
+
+The designer should pick one and design it. We are not attached to any of these.
+
+---
+
+## Current capture UI (what to improve)
 
 ```
 ┌─────────────────────────────────────┐
-│ memoir · online          37.8, -122 │  ← StatusBar
+│ memoir · online          37.8, -122 │
 ├─────────────────────────────────────┤
-│  [ Moment ]  [ Audio ]  [ Photo ]   │  ← Capture buttons
-│  35.64527, 139.39156                │  ← raw coords (not shown to user)
-│  [ ♪ Artist - Track     ] [ Tag ]   │  ← manual music tag (now redundant)
+│  [ Moment ]  [ Audio ]  [ Photo ]   │
+│  35.64527, 139.39156                │
+│  [ ♪ Artist - Track     ] [ Tag ]   │
 ├─────────────────────────────────────┤
-│ RECENT                              │  ← last 10 entries
+│ RECENT                              │
 │ ● 東五反田五丁目          2m        │
 │ ● 道玄坂二丁目            1h        │
-│ ...                                 │
 └─────────────────────────────────────┘
 ```
 
-The music tag input (`♪ Artist - Track`) is now **redundant** — Last.fm handles it automatically. The raw lat/lng readout is internal noise the user shouldn't see. The capture buttons are functional but they don't feel like anything.
-
----
-
-## What the designer is being asked to decide
-
-### 1. The capture gesture
-
-Today: three equal buttons in a row. There's no hierarchy, no primary action.
-
-The question: should the dominant gesture be:
-- A **large single tap zone** that captures "a moment" (the most common type), with audio and photo as secondary gestures?
-- A **gesture-based switcher** (swipe between types)?
-- A **mode-less capture bar** — one button that figures out the best type from context (location changed → moment, microphone held → audio)?
-- Or something else entirely?
-
-The constraint: it must work one-handed, outdoors, with GPS active.
-
-### 2. The audio recording screen
-
-When recording, the current screen shows: a pulsing red dot, a timer, a waveform, pause and stop buttons.
-
-How should recording **feel**? The user is speaking or listening to ambient sound. This screen might be visible for 30 seconds or 10 minutes. It should be calm, not alarming. Consider:
-- What does the waveform visualize and how?
-- What does pause look like vs. stop?
-- Is there any ambient information on screen (place name, now playing) or is it stripped back?
-- What's the experience of the recording ending and being saved?
-
-### 3. The now-playing integration
-
-The server knows what's playing. This is contextual information that should be visible — but not in a way that makes the user feel like they need to interact with it. It's ambient.
-
-Where does "♪ ヒッチコック — ヨルシカ" live on the capture screen? How does the auto-tagging of music to a moment get **confirmed** (or dismissed)? Does it just happen silently, or does the user get a brief acknowledgement?
-
-### 4. Note-taking
-
-Notes are the only capture type that require the user to produce something — every other type (audio, photo, moment) is a single tap. Notes ask for text.
-
-The obvious solution — a text input box — is the wrong one. By the time the user opens a text keyboard on mobile, they're already in a different mental mode. The magic of the other capture types is that they take less than 2 seconds; a text note should feel the same.
-
-Some directions to consider:
-- **Constrained formats** — instead of a blank canvas, offer fragments: a single sentence, a word, a tag, a mood. Less friction than "write something."
-- **Voice-to-note** — tap note, speak, the transcript *becomes* the note body. (The audio transcription pipeline already exists server-side via Whisper.)
-- **Seeded notes** — the app knows where you are, what you're listening to, what the weather is. Does it offer a prompt or a pre-filled template rather than a blank field?
-- **Deferred writing** — capture a location-tagged "note intent" immediately, then let the user fill in the body later from the desktop or a notification.
-
-The constraint: a note should not require the user to stop walking. Whatever the interaction is, it should feel as frictionless as the other types, even if richness comes later.
-
-The designer should pick a direction. We are not attached to the text input box.
-
-### 5. The recent entries strip
-
-
-After capturing, the user sees their last 10 entries. This is a quick sanity check ("yes, that saved") more than a browsing surface.
-
-How much space does it deserve? What does an entry look like in this compact form — just a dot and a place name, or something richer? Should it be scrollable or fixed to show only 3-4?
-
-### 6. The offline state
-
-The user might be underground or out of range. Captures queue locally and sync when reconnected.
-
-How does the app communicate:
-- "you're offline, but this will save when you reconnect"
-- "3 items synced" when reconnection happens
-- vs. a connectivity error
-
-### 7. Tone and visual language
-
-The desktop uses Instrument Serif (italic, display) + Geist (UI) + JetBrains Mono (metadata), on a near-black palette with four ember type-colors (periwinkle audio, amber photo, sage moment, dusty rose note) and a warm amber "live" color.
-
-The mobile should inherit this language but adapt it for:
-- Small screen (390px wide is the target)
-- Bright outdoor light — the palette might need higher contrast than the desktop
-- Touch targets (minimum 44px, prefer 56px for primary actions)
-- One-handed reach zones (bottom of screen is thumb territory; top is far)
-
----
-
-## Constraints
-
-- **Tech stack fixed**: React 18 + Mantine 7. No native components.
-- **PWA first, Capacitor later** — the design will be implemented as a PWA and eventually wrapped in a native Capacitor shell (iOS + Android). Design for the PWA; Capacitor doesn't change the UI, only adds background capabilities.
-- **No onboarding.** Single-user app, always already set up.
-- **No navigation.** There is no "back" button because there are no other screens. Capture is the only screen.
-- **Note type needs a capture path and a rethink.** A plain text input box is explicitly not the answer — see question 4 above. The designer should propose an interaction that keeps note capture as fast as the other types.
-- **Scales to years of use.** The recent list shows 10 entries but the underlying archive may have 10,000. The design shouldn't imply this is a small tool.
+Problems to solve:
+- No note capture path
+- Raw lat/lng is noise (the user sees "35.64527, 139.39156" — meaningless)
+- The music tag input is now redundant (Last.fm handles it automatically)
+- Three equal buttons have no hierarchy — audio is the most expressive type and probably deserves more emphasis
+- No way to access the archive from here
 
 ---
 
 ## What to return
 
-- A **point of view** on each of the six questions above.
-- Mockups for **four states**: (1) default capture screen, (2) during audio recording, (3) note capture flow, (4) after capture (recent entries visible, now-playing visible).
-- Notes on the **transition into and out of** audio recording — what animates, how the waveform appears.
-- Notes on how **offline state** is communicated.
-- A short rationale for the primary capture gesture decision — that's the one that shapes everything.
+**For each wireframe candidate** (minimum 2, ideally 3):
+- Name/label for the candidate ("bottom tab", "gesture-based", "recorder-first", etc.)
+- Key screens: (1) default/home, (2) browsing the archive, (3) viewing a single entry, (4) during audio recording, (5) note capture
+- A one-paragraph rationale — what assumptions this direction makes about how the user moves through the app
 
-You don't need to spec component internals. The engineer will translate your visual direction into Mantine + CSS.
+**Across all candidates:**
+- Notes on navigation model (tabs? gestures? single-screen with sheets?)
+- How capture and browse coexist — is capture always available, or does it have its own mode?
+- How the Cosmographic Atlas palette translates to mobile brightness and contrast
+- The now-playing treatment — where does "♪ ヒッチコック — ヨルシカ" live?
+
+**You don't need to** spec Mantine components or hand off implementation details. The engineer will translate visual direction into code.
 
 ---
 
-## Reference
+## Constraints
 
-- Desktop design system: `docs/design/proposal.html` — slides 1–13, especially the typography specimen (slide 04) and the Cosmographic Atlas palette (slide 03).
-- The mobile currently lives at the Tailscale URL at `/mobile`. Ask the engineer for access if you need to see it live.
+- **React 18 + Mantine 7.** No native-only components.
+- **PWA first, Capacitor later.** Same React codebase will eventually run in a native wrapper. Design for PWA; don't design around native OS patterns.
+- **Portrait phone screen.** 390×844px (iPhone 14 reference). Safe area insets at top and bottom.
+- **One-handed use.** Bottom of screen is thumb territory. Primary actions live below the midpoint.
+- **Scales to years of data.** Any design that only looks good with 10 entries is the wrong design.
+- **No accounts, no sharing, no onboarding.** Single-owner app, always already set up.
+- **Offline-first.** Captures queue when offline. The UI should communicate this gracefully.
+
+---
+
+## Reference material
+
+- Desktop design system in full: `docs/design/proposal.html` (13 slides — all of it is relevant context)
+- Original desktop brief: `docs/design-brief.md`
+- Live app at `https://chea.brown-iwato.ts.net:3000/mobile` (ask engineer for access)
