@@ -10,6 +10,7 @@ server.log
 docs/roadmap.md
 docs/implementation-plan.md
 docs/design/.image-slots.state.json
+STATUS.md
 
 # test ephemera
 tests/.tmp/
