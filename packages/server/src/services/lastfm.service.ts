@@ -22,7 +22,7 @@ export class LastfmService implements OnApplicationBootstrap {
   private scrobbleTimer: NodeJS.Timeout | null = null;
   private nowTimer:      NodeJS.Timeout | null = null;
   private lastPollTs  = 0;
-  private nowPlaying: { title: string; artist: string } | null = null;
+  nowPlaying: { title: string; artist: string } | null = null;
 
   constructor(
     private readonly entries: EntriesService,

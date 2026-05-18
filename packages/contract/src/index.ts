@@ -134,6 +134,16 @@ export const contract = c.router({
       responses: { 204: c.noBody() },
     },
   }),
+  music: c.router({
+    nowPlaying: {
+      method: 'GET',
+      path: '/api/music/nowplaying',
+      query: z.object({}),
+      responses: {
+        200: z.object({ title: z.string(), artist: z.string() }).nullable(),
+      },
+    },
+  }),
   location: c.router({
     heartbeat: {
       method: 'POST',

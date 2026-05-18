@@ -7,6 +7,7 @@ import { MediaModule } from './media/media.module';
 import { EventsModule } from './events/events.module';
 import { LastfmService } from './services/lastfm.service';
 import { LocationModule } from './location/location.module';
+import { MusicController } from './music/music.controller';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { LocationModule } from './location/location.module';
     EventsModule,
     LocationModule,
   ],
-  providers: [LastfmService], // EventsGateway via EventsModule, LocationStore via LocationModule
+  providers:   [LastfmService],
+  controllers: [MusicController],
 })
 export class AppModule {}

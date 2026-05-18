@@ -31,7 +31,12 @@ export function App() {
     if (res.status === 200) setSessions(res.body);
   }, []);
 
-  useEffect(() => { loadEntries(); loadSessions(); }, [loadEntries, loadSessions]);
+  const loadNowPlaying = useCallback(async () => {
+    const res = await api.music.nowPlaying({ query: {} });
+    if (res.status === 200) setNowPlaying(res.body);
+  }, []);
+
+  useEffect(() => { loadEntries(); loadSessions(); loadNowPlaying(); }, [loadEntries, loadSessions, loadNowPlaying]);
 
   useEffect(() => {
     const handleWs = (msg: WsMessage) => {
@@ -41,7 +46,7 @@ export function App() {
       if (msg.type === 'entry:deleted') setEntries(p => p.filter(e => e.id !== msg.payload.id));
     };
     // Re-fetch on reconnect so missed events during downtime don't leave stale state
-    const open  = () => { setWsOnline(true); loadEntries(); loadSessions(); };
+    const open  = () => { setWsOnline(true); loadEntries(); loadSessions(); loadNowPlaying(); };
     const close = () => setWsOnline(false);
     document.addEventListener('ws:open',  open);
     document.addEventListener('ws:close', close);
