@@ -1,9 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": "../..",
-    "paths": {
-      "@memoir/contract": ["../contract/src/index.ts"]
-    }
+    "rootDir": "../.."
   }
 }
