@@ -63,14 +63,46 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
     mapRef.current = map;
 
     map.on('load', () => {
-      // Atmosphere ring around the globe
+      // Atmosphere — warm rim matching the design's globe-atmos
       (map as any).setFog({
-        color:            'rgb(12, 10, 16)',
-        'high-color':     'rgb(28, 22, 38)',
-        'horizon-blend':  0.06,
-        'space-color':    'rgb(5, 4, 9)',
+        color:            'rgb(10, 8, 14)',
+        'high-color':     'rgb(6, 4, 10)',
+        'horizon-blend':  0.04,
+        'space-color':    'rgb(4, 3, 7)',
         'star-intensity': 0.0,
       });
+
+      // Sweep all style layers — push dark-v11 to the near-black Cosmographic Atlas palette
+      const set = (id: string, p: string, v: unknown) => {
+        try { (map as any).setPaintProperty(id, p, v); } catch (_) {}
+      };
+      for (const layer of map.getStyle().layers) {
+        const id = layer.id;
+        if (id.startsWith('entries-')) continue;
+        switch (layer.type) {
+          case 'background':
+            set(id, 'background-color', '#06040a');
+            break;
+          case 'fill':
+            // water slightly purple, everything else near-black
+            set(id, 'fill-color', id.includes('water') ? '#0c0a14' : '#080610');
+            set(id, 'fill-opacity', id.includes('hillshade') ? 0 : 0.95);
+            break;
+          case 'line':
+            if (id.includes('admin') || id.includes('boundary') || id.includes('border')) {
+              set(id, 'line-color', '#1c1924');
+              set(id, 'line-opacity', id.includes('-0-') ? 0.45 : 0.2);
+            } else {
+              set(id, 'line-opacity', 0);
+            }
+            break;
+          case 'symbol':
+            set(id, 'text-color', '#3d3848');
+            set(id, 'text-opacity', id.includes('country') || id.includes('ocean') || id.includes('marine') ? 0.35 : 0);
+            set(id, 'icon-opacity', 0);
+            break;
+        }
+      }
 
       // Entry dots source + two layers: glow halo + sharp dot
       map.addSource('entries', { type: 'geojson', data: toGeoJSON([]) });
@@ -170,8 +202,16 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
         transition: 'opacity 800ms ease',
         pointerEvents: 'none',
       }} />
-      {/* Mapbox canvas */}
-      <div ref={containerRef} style={{ position: 'absolute', inset: 0, zIndex: 2 }} />
+      {/* Mapbox canvas — transparent bg so space gradient shows through outside the globe */}
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'transparent' }} />
+      {/* atmosphere rim — warm glow around the globe edge, fades with zoom */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0, zIndex: 3,
+        background: 'radial-gradient(circle at 50% 50%, transparent 28%, rgba(255,230,200,0.03) 32%, rgba(120,140,200,0.025) 37%, transparent 42%)',
+        filter: 'blur(6px)',
+        opacity: starOpacity * 1.5,
+        pointerEvents: 'none',
+      }} />
     </div>
   );
 }
