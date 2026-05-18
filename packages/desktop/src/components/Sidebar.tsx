@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollArea, UnstyledButton } from '@mantine/core';
-import { Entry } from '@memoir/contract';
+import { Entry, PhotoSession } from '@memoir/contract';
 
 const TYPE_VAR: Record<string, string> = {
   audio:  'var(--audio)',
@@ -18,14 +18,26 @@ const FILTERS = ['all', 'audio', 'photo', 'moment', 'note'] as const;
 
 interface Props {
   entries:      Entry[];
+  sessions:     PhotoSession[];
   wsOnline:     boolean;
   filter:       string;
   onFilter:     (type: string) => void;
   onEntryClick: (entry: Entry) => void;
 }
 
-export function Sidebar({ entries, wsOnline, filter, onFilter, onEntryClick }: Props) {
-  const grouped = useMemo(() => groupByDay(entries), [entries]);
+export function Sidebar({ entries, sessions, wsOnline, filter, onFilter, onEntryClick }: Props) {
+  // Build set of entry IDs that are already represented by a session tile
+  const sessionEntryIds = useMemo(
+    () => new Set(sessions.flatMap(s => s.entry_ids)),
+    [sessions],
+  );
+
+  // Merge: spine entries + solo photos + session objects, grouped by day
+  const grouped = useMemo(() => {
+    const visibleEntries = entries.filter(e => e.type !== 'photo' || !sessionEntryIds.has(e.id));
+    const all: (Entry | PhotoSession)[] = [...visibleEntries, ...sessions];
+    return groupByDay(all);
+  }, [entries, sessions, sessionEntryIds]);
 
   return (
     <div style={{
@@ -139,11 +151,11 @@ export function Sidebar({ entries, wsOnline, filter, onFilter, onEntryClick }: P
               no moments yet
             </div>
           )}
-          {grouped.map(([day, dayEntries]) => (
+          {grouped.map(([day, items]) => (
             <DayGroup
               key={day}
               day={day}
-              entries={dayEntries}
+              items={items}
               onEntryClick={onEntryClick}
             />
           ))}
@@ -153,33 +165,27 @@ export function Sidebar({ entries, wsOnline, filter, onFilter, onEntryClick }: P
   );
 }
 
-function DayGroup({ day, entries, onEntryClick }: {
-  day: string; entries: Entry[]; onEntryClick: (e: Entry) => void;
+function DayGroup({ day, items, onEntryClick }: {
+  day: string; items: (Entry | PhotoSession)[]; onEntryClick: (e: Entry) => void;
 }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
-      {/* Day header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-        paddingBottom: 6,
-        borderBottom: '1px solid var(--ink-300)',
+        paddingBottom: 6, borderBottom: '1px solid var(--ink-300)',
       }}>
-        <span style={{
-          fontFamily: 'var(--font-display)', fontStyle: 'italic',
-          fontSize: 20, color: 'var(--paper-900)',
-        }}>{day}</span>
-        <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10,
-          color: 'var(--paper-400)',
-          letterSpacing: '0.16em', textTransform: 'uppercase',
-        }}>
-          {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+        <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: 'var(--paper-900)' }}>
+          {day}
+        </span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--paper-400)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
+          {items.length} {items.length === 1 ? 'entry' : 'entries'}
         </span>
       </div>
-      {/* Tiles */}
-      {entries.map(entry => (
-        <EntryTile key={entry.id} entry={entry} onClick={() => onEntryClick(entry)} />
-      ))}
+      {items.map(item =>
+        isSession(item)
+          ? <SessionTile key={`s-${item.started_at}`} session={item} />
+          : <EntryTile   key={item.id} entry={item} onClick={() => onEntryClick(item)} />
+      )}
     </div>
   );
 }
@@ -251,14 +257,45 @@ function EntryTile({ entry, onClick }: { entry: Entry; onClick: () => void }) {
   );
 }
 
-function groupByDay(entries: Entry[]): [string, Entry[]][] {
-  const map = new Map<string, Entry[]>();
-  for (const e of entries) {
-    const key = new Date(e.created_at).toLocaleDateString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-    });
+function SessionTile({ session }: { session: PhotoSession }) {
+  const dur = Math.round((session.ended_at - session.started_at) / 60000);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr', gap: 14, alignItems: 'start', padding: '2px 0' }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--paper-500)', letterSpacing: '0.06em', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ display: 'block', width: 6, height: 6, borderRadius: '50%', background: 'var(--photo)', boxShadow: '0 0 8px var(--photo-glow)', flexShrink: 0 }} />
+        {formatTime(session.started_at)}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, lineHeight: 1.25, color: 'var(--paper-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {session.place_name ?? 'Photo session'}
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--paper-400)', marginTop: 3 }}>
+          {session.frame_count} frames{dur > 0 ? ` · ${dur} min` : ''}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function isSession(item: Entry | PhotoSession): item is PhotoSession {
+  return 'frame_count' in item;
+}
+
+function groupByDay(items: (Entry | PhotoSession)[]): [string, (Entry | PhotoSession)[]][] {
+  const map = new Map<string, (Entry | PhotoSession)[]>();
+  for (const item of items) {
+    const ts = isSession(item) ? item.started_at : item.created_at;
+    const key = new Date(ts).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(e);
+    map.get(key)!.push(item);
+  }
+  // Sort each day's items by timestamp descending
+  for (const [, day] of map) {
+    day.sort((a, b) => {
+      const ta = isSession(a) ? a.started_at : a.created_at;
+      const tb = isSession(b) ? b.started_at : b.created_at;
+      return tb - ta;
+    });
   }
   return [...map.entries()];
 }

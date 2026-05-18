@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, AppShell } from '@mantine/core';
-import { Entry } from '@memoir/contract';
+import { Entry, PhotoSession } from '@memoir/contract';
 import { api, createWsClient, WsMessage } from './api/client';
 import { Sidebar } from './components/Sidebar';
 import { DetailPanel } from './components/DetailPanel';
@@ -9,6 +9,7 @@ import { MapCanvas } from './globe/MapCanvas';
 
 export function App() {
   const [entries, setEntries]       = useState<Entry[]>([]);
+  const [sessions, setSessions]     = useState<PhotoSession[]>([]);
   const [selected, setSelected]     = useState<Entry | null>(null);
   const [wsOnline, setWsOnline]     = useState(false);
   const [filter, setFilter]         = useState<string>('all');
@@ -19,7 +20,12 @@ export function App() {
     if (res.status === 200) setEntries(res.body);
   }, [filter]);
 
-  useEffect(() => { loadEntries(); }, [loadEntries]);
+  const loadSessions = useCallback(async () => {
+    const res = await api.sessions.list({ query: {} });
+    if (res.status === 200) setSessions(res.body);
+  }, []);
+
+  useEffect(() => { loadEntries(); loadSessions(); }, [loadEntries, loadSessions]);
 
   useEffect(() => {
     const handleWs = (msg: WsMessage) => {
@@ -53,6 +59,7 @@ export function App() {
         <ChromeFader>
           <Sidebar
             entries={entries}
+            sessions={sessions}
             wsOnline={wsOnline}
             filter={filter}
             onFilter={handleFilter}

@@ -70,6 +70,17 @@ export const UpdateEntrySchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+export const PhotoSessionSchema = z.object({
+  entry_ids:   z.array(z.string()),
+  lat_center:  z.number(),
+  lng_center:  z.number(),
+  started_at:  z.number(),
+  ended_at:    z.number(),
+  place_name:  z.string().nullable(),
+  frame_count: z.number(),
+});
+export type PhotoSession = z.infer<typeof PhotoSessionSchema>;
+
 export const UploadResponseSchema = z.object({
   path: z.string(),
   thumb: z.string().nullable(),
@@ -120,6 +131,14 @@ export const contract = c.router({
       pathParams: z.object({ id: z.string() }),
       body: c.noBody(),
       responses: { 204: c.noBody() },
+    },
+  }),
+  sessions: c.router({
+    list: {
+      method: 'GET',
+      path: '/api/sessions',
+      query: z.object({}),
+      responses: { 200: z.array(PhotoSessionSchema) },
     },
   }),
   media: c.router({

@@ -4,8 +4,20 @@ import { DbService } from '../db/db.service';
 import { EventsGateway } from '../events/events.gateway';
 import { GeocoderService } from '../services/geocoder.service';
 import { WeatherService } from '../services/weather.service';
-import { CreateEntrySchema, UpdateEntrySchema, Entry } from '@memoir/contract';
+import { CreateEntrySchema, UpdateEntrySchema, Entry, PhotoSession } from '@memoir/contract';
 import { z } from 'zod';
+
+const SESSION_GAP_MS = 10 * 60 * 1000; // 10 minutes
+const SESSION_GAP_M  = 50;              // 50 metres
+
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 @Injectable()
 export class EntriesService {
@@ -79,6 +91,48 @@ export class EntriesService {
   remove(id: string) {
     this.db.prepare('DELETE FROM entries WHERE id = ?').run(id);
     this.events.broadcast('entry:deleted', { id });
+  }
+
+  findSessions(): PhotoSession[] {
+    type PhotoRow = { id: string; created_at: number; lat: number; lng: number; place_name: string | null };
+    const photos = this.db.prepare(
+      `SELECT id, created_at, lat, lng, place_name
+       FROM entries
+       WHERE type = 'photo' AND lat IS NOT NULL AND lng IS NOT NULL
+       ORDER BY created_at ASC`,
+    ).all() as PhotoRow[];
+
+    if (photos.length < 2) return [];
+
+    const sessions: PhotoSession[] = [];
+    let group: PhotoRow[] = [photos[0]];
+
+    const flush = () => {
+      if (group.length < 2) return;
+      const lats = group.map(p => p.lat);
+      const lngs = group.map(p => p.lng);
+      sessions.push({
+        entry_ids:   group.map(p => p.id),
+        lat_center:  lats.reduce((a, b) => a + b, 0) / lats.length,
+        lng_center:  lngs.reduce((a, b) => a + b, 0) / lngs.length,
+        started_at:  group[0].created_at,
+        ended_at:    group[group.length - 1].created_at,
+        place_name:  group[0].place_name,
+        frame_count: group.length,
+      });
+    };
+
+    for (let i = 1; i < photos.length; i++) {
+      const prev = group[group.length - 1];
+      const curr = photos[i];
+      const newSession =
+        curr.created_at - prev.created_at > SESSION_GAP_MS ||
+        haversineM(prev.lat, prev.lng, curr.lat, curr.lng) > SESSION_GAP_M;
+      if (newSession) { flush(); group = [curr]; }
+      else            { group.push(curr); }
+    }
+    flush();
+    return sessions;
   }
 
   private parse(row: Record<string, unknown>): Entry {

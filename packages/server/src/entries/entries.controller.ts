@@ -48,4 +48,12 @@ export class EntriesController {
       return { status: 204 as const, body: undefined };
     });
   }
+
+  @TsRestHandler(contract.sessions.list)
+  sessions() {
+    return tsRestHandler(contract.sessions.list, async () => ({
+      status: 200 as const,
+      body: this.entries.findSessions(),
+    }));
+  }
 }
