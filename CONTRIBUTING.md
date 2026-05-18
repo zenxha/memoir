@@ -32,8 +32,11 @@ Open these and compare against [docs/design/proposal.html](docs/design/proposal.
 pnpm dev              # in one terminal
 pnpm seed             # in another — 50 entries, last 14 days, SF Bay Area
 pnpm seed -- --count 200      # custom count
-pnpm seed -- --reset          # delete all first
+pnpm seed -- --reset          # delete ONLY seeded entries (source=seed), then reseed
+pnpm seed -- --clean          # delete ONLY seeded entries, don't reseed
 ```
+
+All seeded entries carry `source=seed`. `--reset` and `--clean` never touch real captures (`source=native`). The dev `memoir.db` is also never touched by `pnpm verify` — tests use the ephemeral DB at `tests/.tmp/`.
 
 ## Adding a test
 

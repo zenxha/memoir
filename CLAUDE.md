@@ -111,8 +111,8 @@ packages/
     src/main.ts              ← bootstrap, HTTPS detection, /config.js
   desktop/    React + Mantine + Mapbox
     src/api/client.ts        ← ts-rest client + WS factory
-    src/globe/               ← Three.js + StreetMap — DEATH ROW, see Phase B
-    src/components/          ← Sidebar, DetailPanel, StatusBar, RecentList
+    src/globe/MapCanvas.tsx  ← Mapbox v3 globe (Three.js retired Phase B)
+    src/components/          ← Sidebar, EntryDetail, ChromeFader
   mobile/     React PWA
     src/components/          ← CaptureBar, AudioRecorder
     src/hooks/useOfflineQueue.ts
@@ -126,8 +126,7 @@ tests/screenshots/           ← gitignored, visual self-inspection
 
 See `docs/implementation-plan.md` for full context. Known open calls Claude should *not* unilaterally decide:
 
-1. Music card fallback content on Moment detail (no album art case)
-2. Photo session clustering threshold (recommended: 10 min + 50 m)
-3. ⌘K query language v0 (recommend: free text + a few hardcoded actions)
+1. Music card fallback content on Moment detail (no album art case) — recommendation: italic-serif text-only until Phase 2 Last.fm
+2. ⌘K query language v0 — recommendation: free text + hardcoded actions; natural language is Phase 5
 
-The Three.js retirement question is already answered (yes, retire) — see `docs/implementation-plan.md`.
+Resolved: Three.js retired (Phase B done). Photo session clustering shipped at 10 min / 50 m (Phase D done).
