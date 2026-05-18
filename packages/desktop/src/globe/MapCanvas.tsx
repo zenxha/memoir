@@ -114,11 +114,31 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
               set(id, 'line-opacity', 0);
             }
             break;
-          case 'symbol':
-            set(id, 'text-color', '#3d3020');
-            set(id, 'text-opacity', id.includes('country') || id.includes('ocean') || id.includes('marine') ? 0.3 : 0);
+          case 'symbol': {
+            const isCountry = id.includes('country');
+            const isOcean   = id.includes('ocean') || id.includes('marine');
+            const isCity    = id.includes('settlement') || id.includes('place');
+            if (isCountry) {
+              set(id, 'text-color', '#c8b89a');   // warm parchment
+              set(id, 'text-opacity', 0.7);
+              set(id, 'text-halo-color', 'rgba(0,0,0,0.6)');
+              set(id, 'text-halo-width', 1.5);
+            } else if (isOcean) {
+              set(id, 'text-color', '#8a9ab0');   // cool slate for ocean labels
+              set(id, 'text-opacity', 0.5);
+              set(id, 'text-halo-color', 'rgba(0,0,0,0.5)');
+              set(id, 'text-halo-width', 1);
+            } else if (isCity) {
+              set(id, 'text-color', '#b0a088');
+              set(id, 'text-opacity', 0.55);
+              set(id, 'text-halo-color', 'rgba(0,0,0,0.7)');
+              set(id, 'text-halo-width', 1);
+            } else {
+              set(id, 'text-opacity', 0);
+            }
             set(id, 'icon-opacity', 0);
             break;
+          }
         }
       }
 
