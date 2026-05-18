@@ -13,7 +13,10 @@ export class WhisperService {
     const model = process.env.WHISPER_MODEL;
     if (!bin || !model || !fs.existsSync(bin) || !fs.existsSync(model)) return;
 
-    const absPath = path.join(__dirname, '../../data', mediaPath);
+    const dataDir = process.env.MEMOIR_DATA_DIR
+      ? path.resolve(process.env.MEMOIR_DATA_DIR)
+      : path.join(__dirname, '../../data');
+    const absPath = path.join(dataDir, mediaPath);
     const wavPath = absPath.replace(/\.[^.]+$/, '_whisper.wav');
 
     execFile('ffmpeg', ['-i', absPath, '-ar', '16000', '-ac', '1', '-y', wavPath], (err) => {

@@ -6,7 +6,9 @@ import * as path from 'path';
 import { Response } from 'express';
 import { MediaService } from './media.service';
 
-const MEDIA_DIR = path.join(__dirname, '../../data/media');
+const MEDIA_DIR = process.env.MEMOIR_DATA_DIR
+  ? path.resolve(process.env.MEMOIR_DATA_DIR, 'media')
+  : path.join(__dirname, '../../data/media');
 
 @Controller('api/media')
 export class MediaController {

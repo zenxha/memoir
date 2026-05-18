@@ -5,7 +5,9 @@ import sharp from 'sharp';
 import { DbService } from '../db/db.service';
 import { WhisperService } from '../services/whisper.service';
 
-const MEDIA_DIR = path.join(__dirname, '../../data/media');
+const MEDIA_DIR = process.env.MEMOIR_DATA_DIR
+  ? path.resolve(process.env.MEMOIR_DATA_DIR, 'media')
+  : path.join(__dirname, '../../data/media');
 
 @Injectable()
 export class MediaService {

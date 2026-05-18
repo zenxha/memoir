@@ -10,3 +10,9 @@ server.log
 docs/roadmap.md
 docs/implementation-plan.md
 docs/design/.image-slots.state.json
+
+# test ephemera
+tests/.tmp/
+tests/screenshots/
+test-results/
+playwright-report/
