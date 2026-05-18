@@ -93,13 +93,30 @@ The server knows what's playing. This is contextual information that should be v
 
 Where does "♪ ヒッチコック — ヨルシカ" live on the capture screen? How does the auto-tagging of music to a moment get **confirmed** (or dismissed)? Does it just happen silently, or does the user get a brief acknowledgement?
 
-### 4. The recent entries strip
+### 4. Note-taking
+
+Notes are the only capture type that require the user to produce something — every other type (audio, photo, moment) is a single tap. Notes ask for text.
+
+The obvious solution — a text input box — is the wrong one. By the time the user opens a text keyboard on mobile, they're already in a different mental mode. The magic of the other capture types is that they take less than 2 seconds; a text note should feel the same.
+
+Some directions to consider:
+- **Constrained formats** — instead of a blank canvas, offer fragments: a single sentence, a word, a tag, a mood. Less friction than "write something."
+- **Voice-to-note** — tap note, speak, the transcript *becomes* the note body. (The audio transcription pipeline already exists server-side via Whisper.)
+- **Seeded notes** — the app knows where you are, what you're listening to, what the weather is. Does it offer a prompt or a pre-filled template rather than a blank field?
+- **Deferred writing** — capture a location-tagged "note intent" immediately, then let the user fill in the body later from the desktop or a notification.
+
+The constraint: a note should not require the user to stop walking. Whatever the interaction is, it should feel as frictionless as the other types, even if richness comes later.
+
+The designer should pick a direction. We are not attached to the text input box.
+
+### 5. The recent entries strip
+
 
 After capturing, the user sees their last 10 entries. This is a quick sanity check ("yes, that saved") more than a browsing surface.
 
 How much space does it deserve? What does an entry look like in this compact form — just a dot and a place name, or something richer? Should it be scrollable or fixed to show only 3-4?
 
-### 5. The offline state
+### 6. The offline state
 
 The user might be underground or out of range. Captures queue locally and sync when reconnected.
 
@@ -108,7 +125,7 @@ How does the app communicate:
 - "3 items synced" when reconnection happens
 - vs. a connectivity error
 
-### 6. Tone and visual language
+### 7. Tone and visual language
 
 The desktop uses Instrument Serif (italic, display) + Geist (UI) + JetBrains Mono (metadata), on a near-black palette with four ember type-colors (periwinkle audio, amber photo, sage moment, dusty rose note) and a warm amber "live" color.
 
@@ -126,7 +143,7 @@ The mobile should inherit this language but adapt it for:
 - **PWA first, Capacitor later** — the design will be implemented as a PWA and eventually wrapped in a native Capacitor shell (iOS + Android). Design for the PWA; Capacitor doesn't change the UI, only adds background capabilities.
 - **No onboarding.** Single-user app, always already set up.
 - **No navigation.** There is no "back" button because there are no other screens. Capture is the only screen.
-- **Note type needs a capture path.** Currently the schema supports text notes but the UI has no way to create one. The designer should include it.
+- **Note type needs a capture path and a rethink.** A plain text input box is explicitly not the answer — see question 4 above. The designer should propose an interaction that keeps note capture as fast as the other types.
 - **Scales to years of use.** The recent list shows 10 entries but the underlying archive may have 10,000. The design shouldn't imply this is a small tool.
 
 ---
@@ -134,7 +151,7 @@ The mobile should inherit this language but adapt it for:
 ## What to return
 
 - A **point of view** on each of the six questions above.
-- Mockups for **three states**: (1) default capture screen, (2) during audio recording, (3) after capture (recent entries visible, now-playing visible).
+- Mockups for **four states**: (1) default capture screen, (2) during audio recording, (3) note capture flow, (4) after capture (recent entries visible, now-playing visible).
 - Notes on the **transition into and out of** audio recording — what animates, how the waveform appears.
 - Notes on how **offline state** is communicated.
 - A short rationale for the primary capture gesture decision — that's the one that shapes everything.
