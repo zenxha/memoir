@@ -140,6 +140,18 @@ export class EntriesService {
     return !!this.db.prepare('SELECT 1 FROM entries WHERE external_id = ?').get(externalId);
   }
 
+  // Nearest native entry within the time window — used by importers to infer location
+  nearestLocation(ts: number, windowMs = 30 * 60 * 1000): { lat: number; lng: number } | null {
+    const row = this.db.prepare(`
+      SELECT lat, lng FROM entries
+      WHERE source = 'native' AND lat IS NOT NULL AND lng IS NOT NULL
+        AND ABS(created_at - ?) <= ?
+      ORDER BY ABS(created_at - ?) ASC
+      LIMIT 1
+    `).get(ts, windowMs, ts) as { lat: number; lng: number } | null;
+    return row ?? null;
+  }
+
   private parse(row: Record<string, unknown>): Entry {
     return {
       ...row,

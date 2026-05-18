@@ -62,6 +62,8 @@ export class LastfmService implements OnApplicationBootstrap {
 
         if (this.entries.existsByExternalId(externalId)) continue;
 
+        const loc = this.entries.nearestLocation(uts * 1000);
+
         await this.entries.create({
           type:         'moment',
           source:       'lastfm',
@@ -71,6 +73,7 @@ export class LastfmService implements OnApplicationBootstrap {
           music_key:    `${track.artist['#text']}::${track.name}`,
           title:        track.name,
           external_id:  externalId,
+          ...(loc ? { lat: loc.lat, lng: loc.lng } : {}),
         } as any);
         imported++;
       }
