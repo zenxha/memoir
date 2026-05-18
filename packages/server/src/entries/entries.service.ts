@@ -58,8 +58,8 @@ export class EntriesService {
       INSERT INTO entries
         (id, created_at, source, type, lat, lng, accuracy, altitude, place_name,
          title, body, duration_ms, waveform, music_title, music_artist, music_key,
-         tags, weather, device_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         tags, weather, device_id, external_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       id, now, dto.source ?? 'native', dto.type,
       lat ?? null, lng ?? null, dto.accuracy ?? null, dto.altitude ?? null, place_name,
@@ -68,6 +68,7 @@ export class EntriesService {
       dto.music_title ?? null, dto.music_artist ?? null, dto.music_key ?? null,
       dto.tags ? JSON.stringify(dto.tags) : '[]',
       weather, dto.device_id ?? null,
+      (dto as any).external_id ?? null,
     );
 
     const entry = this.findOne(id)!;
@@ -135,12 +136,17 @@ export class EntriesService {
     return sessions;
   }
 
+  existsByExternalId(externalId: string): boolean {
+    return !!this.db.prepare('SELECT 1 FROM entries WHERE external_id = ?').get(externalId);
+  }
+
   private parse(row: Record<string, unknown>): Entry {
     return {
       ...row,
-      tags:    row['tags']    ? JSON.parse(row['tags'] as string)    : [],
-      waveform: row['waveform'] ? JSON.parse(row['waveform'] as string) : null,
-      weather:  row['weather']  ? JSON.parse(row['weather'] as string)  : null,
+      tags:        row['tags']     ? JSON.parse(row['tags'] as string)     : [],
+      waveform:    row['waveform'] ? JSON.parse(row['waveform'] as string) : null,
+      weather:     row['weather']  ? JSON.parse(row['weather'] as string)  : null,
+      external_id: (row['external_id'] as string | null) ?? null,
     } as Entry;
   }
 }

@@ -41,4 +41,13 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_entries_source  ON entries(source);
     `,
   },
+  {
+    version: 2,
+    name: 'external_id',
+    sql: `
+      ALTER TABLE entries ADD COLUMN external_id TEXT;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_external_id ON entries(external_id)
+        WHERE external_id IS NOT NULL;
+    `,
+  },
 ];

@@ -5,6 +5,7 @@ import { DbModule } from './db/db.module';
 import { EntriesModule } from './entries/entries.module';
 import { MediaModule } from './media/media.module';
 import { EventsModule } from './events/events.module';
+import { LastfmService } from './services/lastfm.service';
 
 @Module({
   imports: [
@@ -17,5 +18,7 @@ import { EventsModule } from './events/events.module';
     MediaModule,
     EventsModule,
   ],
+  providers: [LastfmService],
+  // LastfmService uses EntriesService which is exported by EntriesModule above
 })
 export class AppModule {}

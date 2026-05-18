@@ -33,7 +33,8 @@ export const EntrySchema = z.object({
   music_key: z.string().nullable(),
   tags: z.array(z.string()),
   weather: WeatherSchema.nullable(),
-  device_id: z.string().nullable(),
+  device_id:   z.string().nullable(),
+  external_id: z.string().nullable(),
 });
 
 export type Entry = z.infer<typeof EntrySchema>;

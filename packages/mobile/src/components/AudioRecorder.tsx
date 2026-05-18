@@ -125,7 +125,7 @@ export function AudioRecorder({ position, onSave, onCancel }: Props) {
       onSave(entry);
     } catch {
       enqueue({ body, blob, blobName: `audio${ext}` });
-      onSave({ ...body, id: `offline-${Date.now()}`, created_at: Date.now(), imported_at: null, source: 'native', lat: pos.lat ?? null, lng: pos.lng ?? null, accuracy: pos.accuracy ?? null, altitude: null, place_name: 'Queued offline', title: null, body: null, media_path: null, media_thumb: null, transcript: null, music_title: null, music_artist: null, music_key: null, tags: [], weather: null, device_id: null });
+      onSave({ ...body, id: `offline-${Date.now()}`, created_at: Date.now(), imported_at: null, source: 'native', lat: pos.lat ?? null, lng: pos.lng ?? null, accuracy: pos.accuracy ?? null, altitude: null, place_name: 'Queued offline', title: null, body: null, media_path: null, media_thumb: null, transcript: null, music_title: null, music_artist: null, music_key: null, tags: [], weather: null, device_id: null, external_id: null });
     }
     onCancel();
   }
