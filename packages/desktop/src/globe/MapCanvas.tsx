@@ -63,11 +63,11 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
     mapRef.current = map;
 
     map.on('load', () => {
-      // Atmosphere — warm amber glow suggests city light bleeding into the limb
+      // Atmosphere — stronger rim so globe reads as a distinct sphere against space
       (map as any).setFog({
-        color:            'rgb(14, 10, 6)',
-        'high-color':     'rgb(8, 6, 4)',
-        'horizon-blend':  0.05,
+        color:            'rgb(40, 28, 12)',    // warm amber glow near horizon
+        'high-color':     'rgb(18, 12, 6)',     // fades to dark above
+        'horizon-blend':  0.12,                 // wider blend = visible halo
         'space-color':    'rgb(4, 3, 7)',
         'star-intensity': 0.0,
       });
@@ -90,13 +90,13 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
             break;
           case 'fill':
             if (id.includes('hillshade')) { set(id, 'fill-opacity', 0); break; }
-            if (id.includes('water'))     { set(id, 'fill-color', '#04030a'); set(id, 'fill-opacity', 1); break; }
-            // urban/landuse slightly warmer — simulates diffuse city glow
+            if (id.includes('water'))     { set(id, 'fill-color', '#07060f'); set(id, 'fill-opacity', 1); break; }
+            // urban/landuse — brighter warm glow, visible city clusters
             if (id.includes('urban') || id.includes('landuse') || id.includes('land-use')) {
-              set(id, 'fill-color', '#100c06'); break;
+              set(id, 'fill-color', '#1e1608'); break;
             }
-            // base land: very dark warm brown
-            set(id, 'fill-color', '#0a0804');
+            // base land: dark warm brown — lifted enough to read against space
+            set(id, 'fill-color', '#141008');
             set(id, 'fill-opacity', 0.95);
             break;
           case 'line':
@@ -107,9 +107,9 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
               id.includes('road') || id.includes('street') ||
               id.includes('motorway') || id.includes('trunk') || id.includes('rail')
             ) {
-              // amber road traces — city lights effect
-              set(id, 'line-color', '#c8841a');
-              set(id, 'line-opacity', 0.12);
+              // amber road traces — city lights effect, pushed brighter
+              set(id, 'line-color', '#d4921e');
+              set(id, 'line-opacity', 0.35);
             } else {
               set(id, 'line-opacity', 0);
             }
@@ -225,9 +225,9 @@ export function MapCanvas({ entries, onEntryClick, onModeChange }: Props) {
       {/* atmosphere rim — warm glow around the globe edge, fades with zoom */}
       <div aria-hidden style={{
         position: 'absolute', inset: 0, zIndex: 3,
-        background: 'radial-gradient(circle at 50% 50%, transparent 28%, rgba(255,230,200,0.03) 32%, rgba(120,140,200,0.025) 37%, transparent 42%)',
-        filter: 'blur(6px)',
-        opacity: starOpacity * 1.5,
+        background: 'radial-gradient(circle at 50% 50%, transparent 26%, rgba(255,200,120,0.08) 30%, rgba(200,160,80,0.05) 36%, transparent 42%)',
+        filter: 'blur(8px)',
+        opacity: Math.min(1, starOpacity * 2),
         pointerEvents: 'none',
       }} />
     </div>
