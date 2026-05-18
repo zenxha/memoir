@@ -13,11 +13,14 @@ interface Props {
 
 export function AudioRecorder({ position, onSave, onCancel }: Props) {
   const [elapsed, setElapsed]   = useState(0);
+  const [paused, setPaused]     = useState(false);
   const [peaks, setPeaks]       = useState<number[]>([]);
   const mediaRef    = useRef<MediaRecorder | null>(null);
   const chunksRef   = useRef<Blob[]>([]);
   const peaksRef    = useRef<number[]>([]);
   const startRef    = useRef(Date.now());
+  const accRef      = useRef(0); // accumulated ms before current segment
+  const pausedAtRef = useRef<number | null>(null);
   const timerRef    = useRef<ReturnType<typeof setInterval>>();
   const { enqueue } = useOfflineQueue(onSave);
 
@@ -47,15 +50,19 @@ export function AudioRecorder({ position, onSave, onCancel }: Props) {
       mediaRef.current = mr;
       startRef.current = Date.now();
 
-      timerRef.current = setInterval(() => setElapsed(Date.now() - startRef.current), 500);
+      timerRef.current = setInterval(() => {
+        if (pausedAtRef.current !== null) return; // frozen while paused
+        setElapsed(accRef.current + (Date.now() - startRef.current));
+      }, 100);
 
       const buf = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => {
+        animId = requestAnimationFrame(tick);
+        if (pausedAtRef.current !== null) return; // freeze waveform while paused
         analyser.getByteFrequencyData(buf);
         const peak = Math.max(...Array.from(buf)) / 255;
         peaksRef.current.push(peak);
         setPeaks(p => [...p.slice(-59), peak]);
-        animId = requestAnimationFrame(tick);
       };
       tick();
     });
@@ -67,15 +74,36 @@ export function AudioRecorder({ position, onSave, onCancel }: Props) {
     };
   }, []);
 
+  function togglePause() {
+    const mr = mediaRef.current;
+    if (!mr) return;
+    if (mr.state === 'recording') {
+      mr.pause();
+      pausedAtRef.current = Date.now();
+      accRef.current += Date.now() - startRef.current;
+      setPaused(true);
+    } else if (mr.state === 'paused') {
+      mr.resume();
+      startRef.current = Date.now();
+      pausedAtRef.current = null;
+      setPaused(false);
+    }
+  }
+
   async function stop() {
     clearInterval(timerRef.current);
+    // if paused when stopped, resume briefly so MediaRecorder can flush
+    if (mediaRef.current?.state === 'paused') mediaRef.current.resume();
     const mr = mediaRef.current;
     if (!mr) return;
 
     const { blob, mimeType, duration_ms } = await new Promise<{ blob: Blob; mimeType: string; duration_ms: number }>((resolve) => {
       mr.onstop = () => {
         const mime = mr.mimeType;
-        resolve({ blob: new Blob(chunksRef.current, { type: mime }), mimeType: mime, duration_ms: Date.now() - startRef.current });
+        const duration_ms = pausedAtRef.current !== null
+          ? accRef.current
+          : accRef.current + (Date.now() - startRef.current);
+        resolve({ blob: new Blob(chunksRef.current, { type: mime }), mimeType: mime, duration_ms });
       };
       mr.stop();
       mr.stream.getTracks().forEach(t => t.stop());
@@ -106,10 +134,19 @@ export function AudioRecorder({ position, onSave, onCancel }: Props) {
     <Stack gap="xs" p="md" style={{ borderBottom: '1px solid #1e1e1e' }}>
       <Group justify="space-between">
         <Group gap="xs">
-          <Box style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--mantine-color-red-5)', animation: 'pulse 1s infinite' }} />
+          <Box style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: 'var(--mantine-color-red-5)',
+            animation: paused ? 'none' : 'pulse 1s infinite',
+            opacity: paused ? 0.4 : 1,
+          }} />
           <Text size="sm" ff="monospace">{formatMs(elapsed)}</Text>
+          {paused && <Text size="xs" c="dimmed">paused</Text>}
         </Group>
         <Group gap="xs">
+          <Button size="xs" variant="subtle" color="gray" onClick={togglePause}>
+            {paused ? '▶ Resume' : '⏸ Pause'}
+          </Button>
           <Button size="xs" color="red" onClick={stop}>■ Stop</Button>
           <Button size="xs" variant="subtle" color="gray" onClick={onCancel}>Cancel</Button>
         </Group>
