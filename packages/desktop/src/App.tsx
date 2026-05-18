@@ -40,7 +40,8 @@ export function App() {
       if (msg.type === 'entry:updated') setEntries(p => p.map(e => e.id === msg.payload.id ? msg.payload : e));
       if (msg.type === 'entry:deleted') setEntries(p => p.filter(e => e.id !== msg.payload.id));
     };
-    const open  = () => setWsOnline(true);
+    // Re-fetch on reconnect so missed events during downtime don't leave stale state
+    const open  = () => { setWsOnline(true); loadEntries(); loadSessions(); };
     const close = () => setWsOnline(false);
     document.addEventListener('ws:open',  open);
     document.addEventListener('ws:close', close);
@@ -50,6 +51,13 @@ export function App() {
       document.removeEventListener('ws:close', close);
     };
   }, []);
+
+  // Re-fetch when tab becomes visible again
+  useEffect(() => {
+    const handler = () => { if (!document.hidden) { loadEntries(); loadSessions(); } };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [loadEntries, loadSessions]);
 
   // Open ⌘K on slash key too
   useEffect(() => {
