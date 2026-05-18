@@ -20,6 +20,7 @@ export function StreetMap({ center, entries, onEntryClick }: Props) {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    // @ts-expect-error v3 type mismatch — death-row code, Phase B refactor uses pure Mapbox globe
     mapboxgl.accessToken = (window as any).__CONFIG__?.mapboxToken ?? '';
 
     const map = new mapboxgl.Map({

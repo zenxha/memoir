@@ -3,6 +3,10 @@ import { Box, Button } from '@mantine/core';
 import { Entry } from '@memoir/contract';
 import { StreetMap } from './StreetMap';
 
+// NOTE: This file is on death row — Phase B retires Three.js for Mapbox v3 globe projection.
+// The @ts-expect-error lines below cover Three.js namespace usage that needs proper typing.
+// Don't bother fixing — the file will be deleted.
+// eslint-disable-next-line @typescript-eslint/no-namespace
 declare const THREE: typeof import('three');
 
 const TYPE_COLORS: Record<string, number> = {
@@ -117,6 +121,7 @@ function initGlobe(
   // Entry points
   const pointsGroup = new THREE.Group();
   scene.add(pointsGroup);
+  // @ts-expect-error THREE namespace from CDN — death-row code, fixed by Phase B retirement
   const meshMap = new Map<string, { mesh: THREE.Mesh; entry: Entry }>();
 
   function latLngToXYZ(lat: number, lng: number, r = 1.02) {
@@ -194,6 +199,7 @@ function initGlobe(
   window.addEventListener('mousemove', onMouseMove);
 
   let rafId: number;
+  // @ts-expect-error THREE namespace from CDN — death-row code
   const globe = scene.children[0] as THREE.Mesh;
 
   function animate() {

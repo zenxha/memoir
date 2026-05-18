@@ -3,7 +3,12 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --parallel -r --if-present dev",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "e2e": "playwright test",
+    "seed": "tsx scripts/seed.ts",
+    "verify": "pnpm typecheck && pnpm test && pnpm e2e"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
