@@ -17,3 +17,7 @@ tests/.tmp/
 tests/screenshots/
 test-results/
 playwright-report/
+
+# compiled artifacts that must not land in src/
+packages/contract/src/*.js
+packages/contract/src/*.d.ts
