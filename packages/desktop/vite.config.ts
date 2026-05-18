@@ -9,6 +9,7 @@ const wsOrigin = serverOrigin.replace(/^http/, 'ws');
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 5173,
     proxy: {
       '/api':       { target: serverOrigin, secure: false },
       '/config.js': { target: serverOrigin, secure: false },
