@@ -11,7 +11,7 @@ export class MusicController {
   nowPlaying() {
     return tsRestHandler(contract.music.nowPlaying, async () => ({
       status: 200 as const,
-      body: this.lastfm.nowPlaying,
+      body: this.lastfm.nowPlaying ?? null,
     }));
   }
 }

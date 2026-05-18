@@ -57,9 +57,11 @@ export class LastfmService implements OnApplicationBootstrap {
       const params = new URLSearchParams({
         method: 'user.getRecentTracks', user, api_key: apiKey, format: 'json', limit: '1',
       });
-      const data   = await (await fetch(`${API}?${params}`)).json() as any;
-      const tracks: LfmTrack[] = data?.recenttracks?.track ?? [];
-      const track  = tracks[0];
+      const data = await (await fetch(`${API}?${params}`)).json() as any;
+      const raw  = data?.recenttracks?.track;
+      // Last.fm returns an object (not array) when there is exactly 1 result
+      const tracks: LfmTrack[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      const track = tracks[0];
       const isNow  = track?.['@attr']?.nowplaying === 'true';
 
       const next = isNow ? { title: track.name, artist: track.artist['#text'] } : null;
@@ -79,8 +81,9 @@ export class LastfmService implements OnApplicationBootstrap {
         ...(this.lastPollTs ? { from: String(Math.floor(this.lastPollTs / 1000)) } : {}),
       });
 
-      const data   = await (await fetch(`${API}?${params}`)).json() as any;
-      const tracks: LfmTrack[] = data?.recenttracks?.track ?? [];
+      const data  = await (await fetch(`${API}?${params}`)).json() as any;
+      const raw2  = data?.recenttracks?.track;
+      const tracks: LfmTrack[] = Array.isArray(raw2) ? raw2 : raw2 ? [raw2] : [];
       let imported = 0;
 
       for (const track of tracks) {
