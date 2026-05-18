@@ -3,7 +3,7 @@ import { Box, AppShell } from '@mantine/core';
 import { Entry, PhotoSession } from '@memoir/contract';
 import { api, createWsClient, WsMessage } from './api/client';
 import { Sidebar } from './components/Sidebar';
-import { DetailPanel } from './components/DetailPanel';
+import { EntryDetail } from './components/EntryDetail';
 import { ChromeFader } from './components/ChromeFader';
 import { MapCanvas } from './globe/MapCanvas';
 
@@ -67,11 +67,7 @@ export function App() {
           />
         </ChromeFader>
       </Box>
-      {selected && (
-        <ChromeFader>
-          <DetailPanel entry={selected} onClose={() => setSelected(null)} />
-        </ChromeFader>
-      )}
+      {selected && <EntryDetail entry={selected} onClose={() => setSelected(null)} />}
     </AppShell>
   );
 }
