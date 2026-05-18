@@ -5,7 +5,7 @@ import { api, createWsClient, WsMessage } from './api/client';
 import { Sidebar } from './components/Sidebar';
 import { DetailPanel } from './components/DetailPanel';
 import { ChromeFader } from './components/ChromeFader';
-import { Globe } from './globe/Globe';
+import { MapCanvas } from './globe/MapCanvas';
 
 export function App() {
   const [entries, setEntries]       = useState<Entry[]>([]);
@@ -44,7 +44,7 @@ export function App() {
     <AppShell layout="default" style={{ height: '100vh', background: '#080808' }}>
       <Box style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
         <Box style={{ flex: 1, position: 'relative' }}>
-          <Globe
+          <MapCanvas
             entries={entries}
             onEntryClick={setSelected}
             onModeChange={setMode}
