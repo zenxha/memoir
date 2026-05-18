@@ -4,6 +4,7 @@ import { Entry } from '@memoir/contract';
 import { api, createWsClient, WsMessage } from './api/client';
 import { Sidebar } from './components/Sidebar';
 import { DetailPanel } from './components/DetailPanel';
+import { ChromeFader } from './components/ChromeFader';
 import { Globe } from './globe/Globe';
 
 export function App() {
@@ -49,15 +50,21 @@ export function App() {
             onModeChange={setMode}
           />
         </Box>
-        <Sidebar
-          entries={entries}
-          wsOnline={wsOnline}
-          filter={filter}
-          onFilter={handleFilter}
-          onEntryClick={setSelected}
-        />
+        <ChromeFader>
+          <Sidebar
+            entries={entries}
+            wsOnline={wsOnline}
+            filter={filter}
+            onFilter={handleFilter}
+            onEntryClick={setSelected}
+          />
+        </ChromeFader>
       </Box>
-      {selected && <DetailPanel entry={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ChromeFader>
+          <DetailPanel entry={selected} onClose={() => setSelected(null)} />
+        </ChromeFader>
+      )}
     </AppShell>
   );
 }

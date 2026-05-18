@@ -40,6 +40,10 @@ export default defineConfig({
         // Ephemeral DB + media directory under tests/.tmp — wiped between runs.
         // Absolute path so it lands at repo-root/tests/.tmp regardless of server cwd.
         MEMOIR_DATA_DIR: path.join(__dirname, 'tests', '.tmp', 'data'),
+        // Force HTTP mode — Tailscale cert vars in .env would otherwise start HTTPS,
+        // making http://localhost:3000 requests fail with "Parse Error: Expected HTTP/"
+        TAILSCALE_CERT: '',
+        TAILSCALE_KEY: '',
       },
     },
     {
