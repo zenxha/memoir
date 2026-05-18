@@ -50,4 +50,13 @@ export const migrations: Migration[] = [
         WHERE external_id IS NOT NULL;
     `,
   },
+  {
+    version: 3,
+    name: 'embedding',
+    sql: `
+      ALTER TABLE entries ADD COLUMN embedding BLOB;
+      CREATE INDEX IF NOT EXISTS idx_entries_has_embedding
+        ON entries(id) WHERE embedding IS NOT NULL;
+    `,
+  },
 ];

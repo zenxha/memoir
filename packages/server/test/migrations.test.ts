@@ -74,6 +74,7 @@ describe('db/migrations', () => {
       'title', 'body', 'duration_ms', 'media_path', 'media_thumb',
       'waveform', 'transcript', 'music_title', 'music_artist',
       'music_key', 'tags', 'weather', 'device_id',
+      'external_id', 'embedding',
     ]) {
       expect(colNames).toContain(required);
     }
@@ -91,6 +92,8 @@ describe('db/migrations', () => {
     expect(names).toContain('idx_entries_latlng');
     expect(names).toContain('idx_entries_type');
     expect(names).toContain('idx_entries_source');
+    expect(names).toContain('idx_entries_external_id');
+    expect(names).toContain('idx_entries_has_embedding');
     db.close();
   });
 

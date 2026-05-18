@@ -17,15 +17,17 @@ const TYPE_GLOW: Record<string, string> = {
 const FILTERS = ['all', 'audio', 'photo', 'moment', 'note'] as const;
 
 interface Props {
-  entries:      Entry[];
-  sessions:     PhotoSession[];
-  wsOnline:     boolean;
-  filter:       string;
-  onFilter:     (type: string) => void;
-  onEntryClick: (entry: Entry) => void;
+  entries:        Entry[];
+  sessions:       PhotoSession[];
+  wsOnline:       boolean;
+  filter:         string;
+  onFilter:       (type: string) => void;
+  onEntryClick:   (entry: Entry) => void;
+  selectedIds:    Set<string>;
+  onToggleSelect: (id: string) => void;
 }
 
-export function Sidebar({ entries, sessions, wsOnline, filter, onFilter, onEntryClick }: Props) {
+export function Sidebar({ entries, sessions, wsOnline, filter, onFilter, onEntryClick, selectedIds, onToggleSelect }: Props) {
   // Build set of entry IDs that are already represented by a session tile
   const sessionEntryIds = useMemo(
     () => new Set(sessions.flatMap(s => s.entry_ids)),
@@ -157,6 +159,8 @@ export function Sidebar({ entries, sessions, wsOnline, filter, onFilter, onEntry
               day={day}
               items={items}
               onEntryClick={onEntryClick}
+              selectedIds={selectedIds}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>
@@ -165,8 +169,9 @@ export function Sidebar({ entries, sessions, wsOnline, filter, onFilter, onEntry
   );
 }
 
-function DayGroup({ day, items, onEntryClick }: {
+function DayGroup({ day, items, onEntryClick, selectedIds, onToggleSelect }: {
   day: string; items: (Entry | PhotoSession)[]; onEntryClick: (e: Entry) => void;
+  selectedIds: Set<string>; onToggleSelect: (id: string) => void;
 }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -184,20 +189,30 @@ function DayGroup({ day, items, onEntryClick }: {
       {items.map(item =>
         isSession(item)
           ? <SessionTile key={`s-${item.started_at}`} session={item} />
-          : <EntryTile   key={item.id} entry={item} onClick={() => onEntryClick(item)} />
+          : <EntryTile
+              key={item.id}
+              entry={item}
+              selected={selectedIds.has(item.id)}
+              onClick={(e) => { if (e.shiftKey || e.metaKey) { onToggleSelect(item.id); } else { onEntryClick(item); } }}
+            />
       )}
     </div>
   );
 }
 
-function EntryTile({ entry, onClick }: { entry: Entry; onClick: () => void }) {
+function EntryTile({ entry, selected, onClick }: { entry: Entry; selected: boolean; onClick: (e: React.MouseEvent) => void }) {
   const title = entry.title ?? entry.place_name ?? entry.type;
   const color = TYPE_VAR[entry.type] ?? 'var(--paper-500)';
   const glow  = TYPE_GLOW[entry.type] ?? 'transparent';
 
   return (
     <UnstyledButton onClick={onClick} w="100%" style={{ textAlign: 'left' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr', gap: 14, alignItems: 'start', padding: '2px 0' }}>
+      <div style={{
+        display: 'grid', gridTemplateColumns: '52px 1fr', gap: 14, alignItems: 'start', padding: '2px 0',
+        background: selected ? 'rgba(255,255,255,0.04)' : 'transparent',
+        borderLeft: selected ? `2px solid ${color}` : '2px solid transparent',
+        paddingLeft: 4, marginLeft: -6, borderRadius: 2,
+      }}>
         {/* Stamp column */}
         <div style={{
           fontFamily: 'var(--font-mono)', fontSize: 11,

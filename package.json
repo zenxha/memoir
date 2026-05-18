@@ -8,6 +8,7 @@
     "test": "pnpm -r --if-present test",
     "e2e": "playwright test",
     "seed": "tsx scripts/seed.ts",
+    "takeout": "tsx scripts/takeout-import.ts",
     "verify": "pnpm typecheck && pnpm test && pnpm e2e"
   },
   "devDependencies": {

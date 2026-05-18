@@ -49,6 +49,14 @@ export class EntriesController {
     });
   }
 
+  @TsRestHandler(contract.entries.bulk)
+  bulk() {
+    return tsRestHandler(contract.entries.bulk, async ({ body }) => ({
+      status: 200 as const,
+      body: { affected: this.entries.bulk(body.ids, body.op, body.tags) },
+    }));
+  }
+
   @TsRestHandler(contract.sessions.list)
   sessions() {
     return tsRestHandler(contract.sessions.list, async () => ({

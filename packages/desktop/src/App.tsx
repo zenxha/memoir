@@ -9,6 +9,7 @@ import { RollSurface } from './components/RollSurface';
 import { SurfaceSwitcher, Surface } from './components/SurfaceSwitcher';
 import { CommandPalette, spotlight } from './components/CommandPalette';
 import { NowPlaying } from './components/NowPlaying';
+import { BulkBar } from './components/BulkBar';
 import { MapCanvas } from './globe/MapCanvas';
 
 export function App() {
@@ -20,6 +21,7 @@ export function App() {
   const [surface, setSurface]   = useState<Surface>('atlas');
   const [newEntry, setNewEntry]     = useState<Entry | null>(null);
   const [nowPlaying, setNowPlaying] = useState<{ title: string; artist: string } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const loadEntries = useCallback(async (type = filter) => {
     const res = await api.entries.list({ query: { limit: 1000, ...(type !== 'all' ? { type } : {}) } });
@@ -78,6 +80,26 @@ export function App() {
 
   const handleFilter = (type: string) => { setFilter(type); loadEntries(type); };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const bulkDelete = async () => {
+    await api.entries.bulk({ body: { ids: [...selectedIds], op: 'delete' } });
+    setEntries(e => e.filter(en => !selectedIds.has(en.id)));
+    setSelectedIds(new Set());
+  };
+
+  const bulkTag = async (tags: string[]) => {
+    await api.entries.bulk({ body: { ids: [...selectedIds], op: 'tag', tags } });
+    setSelectedIds(new Set());
+    loadEntries();
+  };
+
   return (
     <AppShell layout="default" style={{ height: '100vh', background: 'var(--ink-000)' }}>
       <CommandPalette entries={entries} onSurface={setSurface} onEntry={setSelected} />
@@ -128,12 +150,20 @@ export function App() {
                 filter={filter}
                 onFilter={handleFilter}
                 onEntryClick={setSelected}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
               />
             </ChromeFader>
           )}
         </Box>
       )}
 
+      <BulkBar
+        count={selectedIds.size}
+        onDelete={bulkDelete}
+        onTag={bulkTag}
+        onClear={() => setSelectedIds(new Set())}
+      />
       {selected && <EntryDetail entry={selected} onClose={() => setSelected(null)} />}
     </AppShell>
   );

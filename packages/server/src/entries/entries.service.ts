@@ -6,6 +6,7 @@ import { GeocoderService } from '../services/geocoder.service';
 import { WeatherService } from '../services/weather.service';
 import { CreateEntrySchema, UpdateEntrySchema, Entry, PhotoSession } from '@memoir/contract';
 import { z } from 'zod';
+import { EmbeddingService } from '../services/embedding.service';
 
 const SESSION_GAP_MS = 10 * 60 * 1000; // 10 minutes
 const SESSION_GAP_M  = 50;              // 50 metres
@@ -26,6 +27,7 @@ export class EntriesService {
     private readonly events: EventsGateway,
     private readonly geocoder: GeocoderService,
     private readonly weather: WeatherService,
+    private readonly embeddings: EmbeddingService,
   ) {}
 
   findAll(query: { type?: string; source?: string; limit?: number; offset?: number; since?: number }): Entry[] {
@@ -73,6 +75,7 @@ export class EntriesService {
 
     const entry = this.findOne(id)!;
     this.events.broadcast('entry:new', entry);
+    this.embeddings.embedAsync(id);
     return entry;
   }
 
@@ -134,6 +137,31 @@ export class EntriesService {
     }
     flush();
     return sessions;
+  }
+
+  bulk(ids: string[], op: 'delete' | 'tag', tags?: string[]): number {
+    if (!ids.length) return 0;
+    const placeholders = ids.map(() => '?').join(',');
+    if (op === 'delete') {
+      const result = this.db.prepare(`DELETE FROM entries WHERE id IN (${placeholders})`).run(...ids);
+      for (const id of ids) this.events.broadcast('entry:deleted', { id });
+      return result.changes;
+    }
+    if (op === 'tag' && tags?.length) {
+      let affected = 0;
+      for (const id of ids) {
+        const row = this.db.prepare('SELECT tags FROM entries WHERE id = ?').get(id) as { tags: string } | null;
+        if (!row) continue;
+        const existing: string[] = JSON.parse(row.tags || '[]');
+        const merged = [...new Set([...existing, ...tags])];
+        this.db.prepare('UPDATE entries SET tags = ? WHERE id = ?').run(JSON.stringify(merged), id);
+        const entry = this.findOne(id);
+        if (entry) this.events.broadcast('entry:updated', entry);
+        affected++;
+      }
+      return affected;
+    }
+    return 0;
   }
 
   existsByExternalId(externalId: string): boolean {

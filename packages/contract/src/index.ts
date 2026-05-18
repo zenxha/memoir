@@ -133,6 +133,16 @@ export const contract = c.router({
       body: c.noBody(),
       responses: { 204: c.noBody() },
     },
+    bulk: {
+      method: 'POST',
+      path: '/api/entries/bulk',
+      body: z.object({
+        ids:  z.array(z.string()),
+        op:   z.enum(['delete', 'tag']),
+        tags: z.array(z.string()).optional(),
+      }),
+      responses: { 200: z.object({ affected: z.number() }) },
+    },
   }),
   music: c.router({
     nowPlaying: {
