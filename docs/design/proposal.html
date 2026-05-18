@@ -1,0 +1,3838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Memoir — Design Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Cosmographic Atlas — palette */
+    --ink-000: #07060a;        /* deepest sky */
+    --ink-050: #0c0a10;        /* page */
+    --ink-100: #131119;        /* surface */
+    --ink-200: #1c1924;        /* raised */
+    --ink-300: #2a2632;        /* border */
+    --ink-400: #3d3848;        /* divider */
+    --paper-900: #f3ece0;      /* warm parchment white */
+    --paper-700: #c8c0b3;      /* muted text */
+    --paper-500: #8a8377;      /* secondary */
+    --paper-400: #6a6358;      /* tertiary */
+    --paper-300: #4d4940;      /* faint */
+
+    /* four luminous embers — entry types */
+    --audio:   oklch(72% 0.13 250);   /* periwinkle */
+    --photo:   oklch(78% 0.13 55);    /* amber */
+    --moment:  oklch(74% 0.10 145);   /* sage */
+    --note:    oklch(74% 0.10 15);    /* dusty rose */
+    --ember:   oklch(76% 0.16 35);    /* live / now */
+
+    --audio-glow:  oklch(72% 0.13 250 / 0.45);
+    --photo-glow:  oklch(78% 0.13 55 / 0.45);
+    --moment-glow: oklch(74% 0.10 145 / 0.45);
+    --note-glow:   oklch(74% 0.10 15 / 0.45);
+
+    --font-display: "Instrument Serif", "Times New Roman", serif;
+    --font-ui: "Geist", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  }
+
+  html, body {
+    margin: 0;
+    background: #000;
+    color: var(--paper-900);
+    font-family: var(--font-ui);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  deck-stage { background: #000; }
+
+  /* slide base */
+  .slide {
+    width: 1920px;
+    height: 1080px;
+    position: relative;
+    overflow: hidden;
+    background: var(--ink-050);
+    color: var(--paper-900);
+  }
+
+  /* subtle film grain on every slide */
+  .slide::after {
+    content: "";
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+    opacity: 0.55;
+    z-index: 60;
+  }
+
+  /* micro chrome — desktop frame at top of screen mocks */
+  .chrome {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 32px;
+    display: flex; align-items: center;
+    padding: 0 18px;
+    z-index: 10;
+    color: var(--paper-400);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .chrome .dots { display: flex; gap: 8px; }
+  .chrome .dots i {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #2a2632; display: block;
+  }
+  .chrome .title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    color: var(--paper-500);
+    font-family: var(--font-ui);
+    font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* universal helpers */
+  .mono { font-family: var(--font-mono); }
+  .serif { font-family: var(--font-display); }
+  .italic { font-style: italic; }
+  .caps { text-transform: uppercase; letter-spacing: 0.14em; }
+  .h-rule {
+    height: 1px; background: var(--ink-300); width: 100%;
+  }
+  .v-rule {
+    width: 1px; background: var(--ink-300); height: 100%;
+  }
+
+  /* type ember dot */
+  .ember {
+    display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--audio);
+    box-shadow: 0 0 12px var(--audio-glow), 0 0 3px var(--audio);
+  }
+  .ember.audio   { background: var(--audio);  box-shadow: 0 0 12px var(--audio-glow),  0 0 3px var(--audio); }
+  .ember.photo   { background: var(--photo);  box-shadow: 0 0 12px var(--photo-glow),  0 0 3px var(--photo); }
+  .ember.moment  { background: var(--moment); box-shadow: 0 0 12px var(--moment-glow), 0 0 3px var(--moment); }
+  .ember.note    { background: var(--note);   box-shadow: 0 0 12px var(--note-glow),   0 0 3px var(--note); }
+
+  /* slide label — bottom corner */
+  .slide-tag {
+    position: absolute;
+    bottom: 36px; left: 60px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+    z-index: 50;
+    white-space: nowrap;
+  }
+  /* on screen-mock slides, sit the tag above the chrome bottom strip */
+  .slide:has(.screen) .slide-tag,
+  .slide:has(.screen) .deck-mark {
+    bottom: auto;
+    top: 12px;
+    background: rgba(7,6,10,0.6);
+    padding: 4px 12px;
+    border: 1px solid var(--ink-300);
+    border-radius: 100px;
+    backdrop-filter: blur(8px);
+  }
+  .slide:has(.screen) .slide-tag { left: 50%; transform: translateX(-50%); top: 8px; }
+  .slide:has(.screen) .deck-mark { display: none; }
+  /* The chrome bar (mac dots) is unneeded for screen mocks since the mock has its own chrome */
+  .slide:has(.screen) > .chrome { display: none; }
+  .slide-tag .num {
+    color: var(--paper-700);
+    margin-right: 18px;
+  }
+  .slide-tag .of {
+    color: var(--paper-300);
+    margin-left: 14px;
+  }
+  .deck-mark {
+    position: absolute;
+    bottom: 36px; right: 60px;
+    z-index: 20;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--paper-500);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .deck-mark::before {
+    content: "";
+    display: block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--ember);
+    box-shadow: 0 0 10px var(--ember);
+  }
+
+  /* ===== Slide 1: Cover =================================================== */
+  .cover {
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 40%, #14111a 0%, #0a0810 50%, #050307 100%);
+    display: grid;
+    place-items: center;
+  }
+  .cover-body { position: relative; text-align: center; }
+  .cover h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 320px;
+    line-height: 0.85;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--paper-900);
+  }
+  .cover h1 .em {
+    font-style: italic;
+    color: var(--paper-700);
+  }
+  .cover .lede {
+    margin-top: 80px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 32px;
+    color: var(--paper-500);
+    letter-spacing: 0.005em;
+  }
+  .cover .meta-row {
+    margin-top: 110px;
+    display: flex; justify-content: center; gap: 88px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .cover .meta-row span b {
+    color: var(--paper-700);
+    font-weight: 400;
+    margin-right: 14px;
+  }
+  /* cover star field */
+  .stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 8% 14%, rgba(255,240,210,0.7), transparent 50%),
+      radial-gradient(1px 1px at 14% 78%, rgba(255,240,210,0.55), transparent 50%),
+      radial-gradient(1px 1px at 22% 32%, rgba(255,240,210,0.4), transparent 50%),
+      radial-gradient(1px 1px at 30% 88%, rgba(255,240,210,0.7), transparent 50%),
+      radial-gradient(1px 1px at 38% 18%, rgba(255,240,210,0.3), transparent 50%),
+      radial-gradient(1px 1px at 47% 64%, rgba(255,240,210,0.6), transparent 50%),
+      radial-gradient(1px 1px at 56% 12%, rgba(255,240,210,0.5), transparent 50%),
+      radial-gradient(1px 1px at 64% 84%, rgba(255,240,210,0.4), transparent 50%),
+      radial-gradient(1px 1px at 71% 28%, rgba(255,240,210,0.7), transparent 50%),
+      radial-gradient(1px 1px at 78% 72%, rgba(255,240,210,0.5), transparent 50%),
+      radial-gradient(1px 1px at 86% 22%, rgba(255,240,210,0.6), transparent 50%),
+      radial-gradient(1px 1px at 92% 58%, rgba(255,240,210,0.4), transparent 50%),
+      radial-gradient(1px 1px at 4% 48%, rgba(255,240,210,0.35), transparent 50%);
+    opacity: 0.7;
+  }
+
+  /* ===== Slide 2: Thesis ================================================== */
+  .thesis {
+    padding: 140px 180px 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .thesis .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--paper-400);
+    margin-bottom: 60px;
+  }
+  .thesis .statement {
+    font-family: var(--font-display);
+    font-size: 76px;
+    line-height: 1.1;
+    color: var(--paper-900);
+    margin: 0;
+    max-width: 1500px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .thesis .statement em {
+    color: var(--paper-500);
+    font-style: italic;
+  }
+  .thesis .statement b {
+    font-weight: 400;
+    color: var(--paper-900);
+    background: linear-gradient(to bottom, transparent 62%, var(--ember-bar, oklch(76% 0.16 35 / 0.3)) 62%, var(--ember-bar) 88%, transparent 88%);
+  }
+  .thesis .signoff {
+    margin-top: 70px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--paper-500);
+    max-width: 1100px;
+    line-height: 1.55;
+  }
+
+  /* ===== Slide 3-4: The six calls ========================================== */
+  .calls {
+    padding: 100px 100px 80px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 60px;
+  }
+  .calls .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    padding: 0 20px;
+  }
+  .calls h2 {
+    font-family: var(--font-display);
+    font-size: 80px;
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .calls h2 em { font-style: italic; color: var(--paper-500); }
+  .calls .lede {
+    max-width: 540px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--paper-500);
+  }
+  .calls-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    border-top: 1px solid var(--ink-300);
+    border-left: 1px solid var(--ink-300);
+  }
+  .call {
+    border-right: 1px solid var(--ink-300);
+    border-bottom: 1px solid var(--ink-300);
+    padding: 38px 40px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 22px;
+    position: relative;
+  }
+  .call .num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .call .num b { color: var(--paper-900); font-weight: 400; margin-right: 16px; }
+  .call .q {
+    font-family: var(--font-display);
+    font-size: 36px;
+    line-height: 1.15;
+    color: var(--paper-700);
+    font-style: italic;
+    letter-spacing: -0.005em;
+  }
+  .call .a {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--paper-900);
+  }
+  .call .a b { font-weight: 500; color: #fff; }
+
+  /* ===== Slide 4: Design system ============================================ */
+  .ds {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    height: 100%;
+  }
+  .ds-left {
+    padding: 110px 90px;
+    border-right: 1px solid var(--ink-300);
+    display: grid;
+    grid-template-rows: auto auto;
+    align-content: start;
+    gap: 80px;
+  }
+  .ds-left .head .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .ds-left h2 {
+    font-family: var(--font-display);
+    font-size: 140px;
+    line-height: 0.92;
+    margin: 28px 0 8px;
+    color: var(--paper-900);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+  .ds-left h2 em { font-style: italic; color: var(--paper-500); }
+  .ds-left .pair {
+    margin-top: 36px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-500);
+    letter-spacing: 0.06em;
+  }
+  .ds-specimens {
+    display: grid; gap: 28px;
+  }
+  .specimen {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    align-items: baseline;
+    gap: 24px;
+    border-top: 1px solid var(--ink-300);
+    padding-top: 18px;
+  }
+  .specimen .label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .specimen .sample.s-display {
+    font-family: var(--font-display);
+    font-size: 42px;
+    color: var(--paper-900);
+    line-height: 1.1;
+  }
+  .specimen .sample.s-display em { font-style: italic; color: var(--paper-500); }
+  .specimen .sample.s-ui {
+    font-family: var(--font-ui);
+    font-size: 18px;
+    color: var(--paper-700);
+    letter-spacing: -0.005em;
+  }
+  .specimen .sample.s-mono {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    color: var(--paper-700);
+    letter-spacing: 0.02em;
+  }
+  .ds-right {
+    padding: 110px 90px;
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 56px;
+    align-content: start;
+  }
+  .ds-right .section-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .swatch-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+  .swatch {
+    border: 1px solid var(--ink-300);
+    padding: 22px 20px 20px;
+    background: var(--ink-100);
+    border-radius: 2px;
+    display: grid;
+    gap: 22px;
+    grid-template-rows: 28px auto auto;
+  }
+  .swatch .dot {
+    width: 22px; height: 22px; border-radius: 50%;
+  }
+  .swatch.audio  .dot { background: var(--audio);  box-shadow: 0 0 24px var(--audio-glow); }
+  .swatch.photo  .dot { background: var(--photo);  box-shadow: 0 0 24px var(--photo-glow); }
+  .swatch.moment .dot { background: var(--moment); box-shadow: 0 0 24px var(--moment-glow); }
+  .swatch.note   .dot { background: var(--note);   box-shadow: 0 0 24px var(--note-glow); }
+  .swatch .name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--paper-900);
+  }
+  .swatch .hex {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.08em;
+  }
+  .neutrals-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border: 1px solid var(--ink-300);
+    height: 84px;
+  }
+  .neutrals-row > div {
+    display: grid; place-items: end start;
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .principles {
+    margin-top: 0;
+    display: grid;
+    gap: 0;
+  }
+  .principle {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    align-items: baseline;
+    gap: 24px;
+    padding: 14px 0;
+    border-top: 1px solid var(--ink-300);
+  }
+  .principle .k {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .principle .v {
+    font-family: var(--font-display);
+    font-size: 20px;
+    line-height: 1.35;
+    color: var(--paper-700);
+    font-style: italic;
+  }
+
+  /* ===== Screen mocks ====================================================== */
+  .screen {
+    position: absolute; inset: 0;
+    background: var(--ink-000);
+  }
+
+  /* annotations on a screen mock */
+  .anno {
+    position: absolute;
+    z-index: 30;
+    pointer-events: none;
+  }
+  .anno .tip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--paper-700);
+    background: rgba(8,7,12,0.85);
+    border: 1px solid var(--ink-300);
+    padding: 8px 12px;
+    text-transform: uppercase;
+    max-width: 280px;
+    line-height: 1.5;
+    text-wrap: balance;
+  }
+  .anno .lead {
+    height: 1px;
+    background: linear-gradient(to right, var(--paper-700), transparent);
+  }
+
+  /* caption strip for each mock */
+  .mock-caption {
+    position: absolute;
+    left: 60px; right: 60px;
+    bottom: 84px;
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    z-index: 25;
+  }
+  .mock-caption .title {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-style: italic;
+    color: var(--paper-900);
+    line-height: 1;
+  }
+  .mock-caption .descr {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    color: var(--paper-500);
+    max-width: 480px;
+    text-align: right;
+    line-height: 1.55;
+  }
+
+  /* ============== HOME — globe ============================================ */
+  .home {
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 50%, #16131e 0%, #0a0810 55%, #050307 100%);
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .home .stars { opacity: 0.6; }
+
+  .home-top {
+    position: absolute;
+    top: 32px; left: 0; right: 0;
+    padding: 24px 48px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+  }
+  .brand {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 28px;
+    color: var(--paper-900);
+    letter-spacing: -0.005em;
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    white-space: nowrap;
+  }
+  .brand::before {
+    content: "";
+    display: block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--ember);
+    box-shadow: 0 0 14px var(--ember);
+  }
+  .topnav {
+    display: flex; gap: 36px; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+  .topnav .pill {
+    border: 1px solid var(--ink-300);
+    padding: 8px 14px;
+    border-radius: 100px;
+    color: var(--paper-700);
+    display: flex; align-items: center; gap: 10px;
+    white-space: nowrap;
+  }
+  .topnav .pill .kbd {
+    color: var(--paper-400);
+    font-size: 10px;
+    border: 1px solid var(--ink-400);
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  /* globe */
+  .globe-wrap {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -54%);
+    width: 820px; height: 820px;
+    z-index: 3;
+  }
+  .globe {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 32% 30%, #2a2438 0%, #1a1624 28%, #0a0810 70%, #06040a 100%);
+    box-shadow:
+      inset 30px -10px 80px rgba(0,0,0,0.7),
+      inset -20px 10px 60px rgba(255,220,180,0.04),
+      0 0 120px rgba(20,18,30,0.8);
+  }
+  .globe-atmos {
+    position: absolute;
+    inset: -36px;
+    border-radius: 50%;
+    background: radial-gradient(circle, transparent 48%, rgba(255,230,200,0.06) 52%, rgba(120,140,200,0.04) 58%, transparent 64%);
+    filter: blur(4px);
+  }
+  .globe-rim {
+    position: absolute; inset: 0; border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(255,230,200,0.04), 0 0 0 1px rgba(255,230,200,0.03);
+  }
+  /* gridded latitudes/longitudes */
+  .globe-grid {
+    position: absolute; inset: 0; border-radius: 50%;
+    overflow: hidden;
+    opacity: 0.35;
+  }
+  .globe-grid svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  /* continents — abstract blurred shapes */
+  .continents {
+    position: absolute; inset: 0; border-radius: 50%;
+    overflow: hidden;
+    opacity: 0.45;
+    mask-image: radial-gradient(circle at 50% 50%, black 49.5%, transparent 50%);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, black 49.5%, transparent 50%);
+  }
+  .continents svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  /* dots */
+  .dot {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .dot.audio   { background: var(--audio);  box-shadow: 0 0 10px 1px var(--audio-glow);  }
+  .dot.photo   { background: var(--photo);  box-shadow: 0 0 10px 1px var(--photo-glow);  }
+  .dot.moment  { background: var(--moment); box-shadow: 0 0 10px 1px var(--moment-glow); }
+  .dot.note    { background: var(--note);   box-shadow: 0 0 10px 1px var(--note-glow);   }
+  .dot.big { width: 8px; height: 8px; }
+  .dot.cluster {
+    width: 16px; height: 16px;
+    background: radial-gradient(circle, var(--ember) 0%, transparent 60%);
+    box-shadow: 0 0 24px 2px oklch(76% 0.16 35 / 0.4);
+    opacity: 0.9;
+  }
+  .dot.now {
+    width: 10px; height: 10px;
+    background: var(--ember);
+    box-shadow: 0 0 18px 3px oklch(76% 0.16 35 / 0.6), 0 0 4px var(--ember);
+    animation: pulse 2.6s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 18px 3px oklch(76% 0.16 35 / 0.7); }
+    50% { box-shadow: 0 0 28px 8px oklch(76% 0.16 35 / 0.15); }
+    100% { box-shadow: 0 0 18px 3px oklch(76% 0.16 35 / 0.7); }
+  }
+
+  /* home center overlay */
+  .home-quote {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .home-quote .num {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--paper-500);
+    letter-spacing: 0.04em;
+  }
+  .home-quote .num b {
+    color: var(--paper-900); font-weight: 400;
+    font-style: normal;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.18em;
+    margin-right: 14px;
+  }
+
+  /* today bar bottom left */
+  .home-today {
+    position: absolute;
+    bottom: 200px; left: 60px;
+    z-index: 5;
+    display: grid;
+    gap: 6px;
+  }
+  .home-today .when {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .home-today .what {
+    font-family: var(--font-display);
+    font-size: 28px;
+    color: var(--paper-900);
+    font-style: italic;
+  }
+  .home-today .meta {
+    margin-top: 4px;
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .home-today .meta .live {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--ember);
+  }
+  .home-today .meta .live::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ember);
+    box-shadow: 0 0 8px var(--ember);
+    animation: pulse 2.6s ease-out infinite;
+  }
+
+  /* sidebar peek on right */
+  .home-sidebar {
+    position: absolute;
+    top: 130px; right: 0; bottom: 200px;
+    width: 360px;
+    z-index: 6;
+    background: linear-gradient(to right, transparent, rgba(10,8,16,0.55) 24%, rgba(10,8,16,0.85) 100%);
+    border-left: 1px solid var(--ink-300);
+    padding: 30px 36px;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 22px;
+  }
+  .sb-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sb-title .count {
+    color: var(--paper-700);
+  }
+  .sb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .sb-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--ink-300);
+    border-radius: 100px;
+    padding: 5px 12px 5px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-500);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .sb-chip.active { color: var(--paper-900); border-color: var(--paper-400); background: rgba(255,255,255,0.02); }
+  .sb-list {
+    display: grid;
+    gap: 18px;
+    overflow: hidden;
+    align-content: start;
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  }
+  .sb-entry {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    column-gap: 14px;
+    align-items: start;
+  }
+  .sb-entry .e-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-top: 8px;
+  }
+  .sb-entry.audio   .e-dot { background: var(--audio);  box-shadow: 0 0 10px var(--audio-glow); }
+  .sb-entry.photo   .e-dot { background: var(--photo);  box-shadow: 0 0 10px var(--photo-glow); }
+  .sb-entry.moment  .e-dot { background: var(--moment); box-shadow: 0 0 10px var(--moment-glow); }
+  .sb-entry.note    .e-dot { background: var(--note);   box-shadow: 0 0 10px var(--note-glow); }
+  .sb-entry .when {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .sb-entry .title {
+    font-family: var(--font-display);
+    font-size: 19px;
+    color: var(--paper-900);
+    line-height: 1.25;
+    margin-top: 4px;
+  }
+  .sb-entry .title em { font-style: italic; color: var(--paper-700); }
+  .sb-entry .place {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--paper-500);
+    margin-top: 4px;
+  }
+
+  /* bottom timeline ribbon (shared) */
+  .timeline {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 132px;
+    background: linear-gradient(to top, rgba(7,6,10,0.95), rgba(7,6,10,0.0));
+    z-index: 7;
+    padding: 16px 60px 18px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 6px;
+  }
+  .tl-head {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .tl-head .left {
+    display: flex; gap: 24px; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tl-head .right {
+    display: flex; gap: 22px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .tl-head .scope {
+    color: var(--paper-900);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 18px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .tl-histogram {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(120, 1fr);
+    gap: 1px;
+    align-items: end;
+    height: 38px;
+  }
+  .tl-histogram .bar {
+    background: var(--ink-300);
+    border-radius: 1px;
+    min-height: 1px;
+  }
+  .tl-histogram .bar.active { background: var(--paper-700); }
+  .tl-histogram .bar.recent { background: var(--ember); box-shadow: 0 0 8px var(--ember); }
+  .tl-brush {
+    position: absolute;
+    top: -4px; bottom: -4px;
+    border-left: 1px solid var(--paper-400);
+    border-right: 1px solid var(--paper-400);
+    background: rgba(243,236,224,0.04);
+    pointer-events: none;
+  }
+  .tl-brush::before, .tl-brush::after {
+    content: "";
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    width: 4px; height: 16px;
+    background: var(--paper-400);
+  }
+  .tl-brush::before { left: -2px; }
+  .tl-brush::after { right: -2px; }
+  .tl-ticks {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+  }
+  .tl-ticks span.now { color: var(--ember); }
+  .tl-ticks span.active { color: var(--paper-900); }
+
+  /* edge facets rail */
+  .facets-rail {
+    position: absolute;
+    left: 0; top: 130px; bottom: 200px;
+    width: 56px;
+    z-index: 5;
+    border-right: 1px solid var(--ink-300);
+    background: rgba(7,6,10,0.4);
+    padding: 22px 0;
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .facets-rail .f-icon {
+    width: 24px; height: 24px;
+    border: 1px solid var(--ink-300);
+    border-radius: 4px;
+    display: grid; place-items: center;
+    color: var(--paper-500);
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+  .facets-rail .f-icon.on { color: var(--paper-900); border-color: var(--paper-400); }
+  .facets-rail .f-divider { width: 24px; height: 1px; background: var(--ink-300); }
+
+  /* ============== BROWSE — map ============================================ */
+  .browse {
+    display: grid;
+    grid-template-columns: 56px 1fr 420px;
+    grid-template-rows: 130px 1fr 132px;
+    grid-template-areas:
+      "rail head head"
+      "rail map sidebar"
+      "rail timeline timeline";
+    background: var(--ink-000);
+    height: 100%;
+  }
+
+  .browse-head {
+    grid-area: head;
+    padding: 30px 48px 22px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--ink-300);
+    gap: 32px;
+  }
+  .browse-head .scope-sub { white-space: nowrap; }
+  .browse-head .scope-title { white-space: nowrap; }
+  .browse-head .left {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+    min-width: 0;
+  }
+  .browse-head .scope-title {
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-style: italic;
+    color: var(--paper-900);
+    line-height: 1;
+  }
+  .browse-head .scope-sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-500);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .filter-row {
+    display: flex; gap: 10px; align-items: center;
+  }
+  .filter-row .pill {
+    border: 1px solid var(--ink-300);
+    padding: 8px 14px;
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--paper-500);
+    display: inline-flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+  }
+  .filter-row .pill.on {
+    color: var(--paper-900);
+    border-color: var(--paper-400);
+    background: rgba(255,255,255,0.02);
+  }
+  .filter-row .pill.audio.on   { color: var(--audio);  border-color: var(--audio); }
+  .filter-row .pill.photo.on   { color: var(--photo);  border-color: var(--photo); }
+  .filter-row .pill.moment.on  { color: var(--moment); border-color: var(--moment); }
+  .filter-row .pill.note.on    { color: var(--note);   border-color: var(--note); }
+
+  .browse-map {
+    grid-area: map;
+    position: relative;
+    overflow: hidden;
+    border-right: 1px solid var(--ink-300);
+  }
+  .map-canvas {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 40% 50%, rgba(28,24,40,0.7) 0%, rgba(12,10,16,0) 70%),
+      radial-gradient(circle at 65% 30%, rgba(28,24,40,0.5) 0%, transparent 50%),
+      #0a0810;
+  }
+  .map-canvas svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+  /* heatmap blobs */
+  .heat {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.4;
+    mix-blend-mode: screen;
+  }
+  /* place labels on map */
+  .place-label {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--paper-500);
+    text-transform: uppercase;
+    z-index: 4;
+  }
+  .place-label.large {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--paper-700);
+    letter-spacing: -0.005em;
+    text-transform: none;
+  }
+  /* map dots wrapper */
+  .map-dots {
+    position: absolute; inset: 0;
+    z-index: 5;
+  }
+  /* compass / scale at bottom-right of map */
+  .map-compass {
+    position: absolute;
+    bottom: 18px; right: 18px;
+    z-index: 6;
+    display: flex; gap: 24px; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .map-compass .scale {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .map-compass .scale .bar {
+    width: 60px; height: 1px; background: var(--paper-400);
+    position: relative;
+  }
+  .map-compass .scale .bar::before,
+  .map-compass .scale .bar::after {
+    content: ""; position: absolute; top: -3px; width: 1px; height: 7px; background: var(--paper-400);
+  }
+  .map-compass .scale .bar::before { left: 0; }
+  .map-compass .scale .bar::after { right: 0; }
+  .map-compass .return {
+    border: 1px solid var(--ink-300);
+    padding: 6px 12px; border-radius: 100px;
+    color: var(--paper-700);
+    background: rgba(7,6,10,0.7);
+  }
+  .map-compass .return::before {
+    content: "↑";
+    margin-right: 8px;
+    color: var(--ember);
+  }
+
+  /* sidebar */
+  .browse-sidebar {
+    grid-area: sidebar;
+    background: var(--ink-050);
+    border-left: 0;
+    padding: 24px 28px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 18px;
+    overflow: hidden;
+  }
+  .sb-search {
+    border: 1px solid var(--ink-300);
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--paper-500);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .sb-search .kbd {
+    margin-left: auto;
+    color: var(--paper-400);
+    border: 1px solid var(--ink-400);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+  .sb-day {
+    display: grid; gap: 14px;
+  }
+  .sb-day .day-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--ink-300);
+  }
+  .sb-day .day-head .date {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--paper-900);
+  }
+  .day-head .count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .sb-tile {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 16px;
+    align-items: start;
+    padding: 4px 0;
+  }
+  .sb-tile.focus {
+    background: linear-gradient(to right, rgba(243,236,224,0.04), transparent);
+    margin: 0 -28px;
+    padding: 4px 28px;
+    border-left: 2px solid var(--ember);
+  }
+  .sb-tile .stamp {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.08em;
+  }
+  .sb-tile .stamp .ember-mini {
+    display: block; width: 6px; height: 6px;
+    border-radius: 50%; margin-bottom: 4px;
+  }
+  .sb-tile.audio  .ember-mini { background: var(--audio);  box-shadow: 0 0 8px var(--audio-glow); }
+  .sb-tile.photo  .ember-mini { background: var(--photo);  box-shadow: 0 0 8px var(--photo-glow); }
+  .sb-tile.moment .ember-mini { background: var(--moment); box-shadow: 0 0 8px var(--moment-glow); }
+  .sb-tile.note   .ember-mini { background: var(--note);   box-shadow: 0 0 8px var(--note-glow); }
+  .sb-tile .title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    color: var(--paper-900);
+    line-height: 1.25;
+  }
+  .sb-tile .title em { color: var(--paper-700); font-style: italic; }
+  .sb-tile .place {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--paper-500);
+    margin-top: 2px;
+  }
+  .sb-tile .preview {
+    margin-top: 6px;
+    height: 4px;
+    background: linear-gradient(to right, var(--audio), var(--audio-glow), transparent 80%);
+    width: 70%;
+    border-radius: 2px;
+  }
+  .sb-tile .miniwave {
+    display: flex; align-items: end; gap: 2px; height: 14px; margin-top: 6px;
+  }
+  .sb-tile .miniwave i {
+    width: 2px; background: var(--audio); border-radius: 1px;
+    display: block;
+  }
+
+  /* live banner top of sidebar */
+  .live-banner {
+    border: 1px solid var(--ember);
+    background: oklch(76% 0.16 35 / 0.08);
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: grid; gap: 6px;
+  }
+  .live-banner .head {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ember);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .live-banner .head::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ember);
+    box-shadow: 0 0 8px var(--ember);
+    animation: pulse 2.6s ease-out infinite;
+  }
+  .live-banner .what {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--paper-900);
+  }
+
+  .browse-timeline { grid-area: timeline; position: relative; border-top: 1px solid var(--ink-300); background: var(--ink-050); }
+  .browse-rail { grid-area: rail; border-right: 1px solid var(--ink-300); background: var(--ink-050); padding: 22px 0; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  .rail-icon {
+    width: 28px; height: 28px;
+    border: 1px solid var(--ink-300);
+    border-radius: 4px;
+    display: grid; place-items: center;
+    color: var(--paper-500);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+  .rail-icon.on { color: var(--paper-900); border-color: var(--paper-400); }
+  .rail-icon.brand {
+    background: var(--ember);
+    box-shadow: 0 0 12px var(--ember);
+    border: none;
+    color: var(--ink-000);
+  }
+
+  /* ============== DETAIL — full screen ==================================== */
+  .detail {
+    position: absolute; inset: 0;
+    background: var(--ink-000);
+    overflow: hidden;
+  }
+
+  /* common detail chrome */
+  .detail-chrome {
+    position: absolute;
+    top: 32px; left: 0; right: 0;
+    padding: 24px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 8;
+  }
+  .detail-back {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 12px;
+    white-space: nowrap;
+  }
+  .detail-back .esc {
+    border: 1px solid var(--ink-400);
+    color: var(--paper-700);
+    padding: 4px 10px; border-radius: 4px;
+    font-size: 10px;
+  }
+  .detail-pager {
+    display: flex; align-items: center; gap: 18px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .detail-pager .nav {
+    display: flex; gap: 6px;
+  }
+  .detail-pager .nav b {
+    border: 1px solid var(--ink-400);
+    padding: 4px 10px; border-radius: 4px;
+    color: var(--paper-700);
+    font-weight: 400;
+    font-family: var(--font-mono);
+  }
+
+  /* meta corners — shared */
+  .meta-tl, .meta-tr, .meta-bl, .meta-br {
+    position: absolute;
+    z-index: 7;
+    color: var(--paper-700);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .meta-tl { top: 110px; left: 60px; max-width: 420px; }
+  .meta-tr { top: 110px; right: 60px; text-align: right; max-width: 420px; }
+  .meta-bl { bottom: 180px; left: 60px; max-width: 380px; }
+  .meta-br { bottom: 180px; right: 60px; text-align: right; max-width: 380px; }
+  .meta .label {
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .meta .v.big {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--paper-900);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+  }
+  .meta .v {
+    font-size: 14px;
+    color: var(--paper-700);
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .meta + .meta { margin-top: 28px; }
+  .meta-stack { display: grid; gap: 28px; }
+
+  /* photo detail */
+  .detail.photo .frame {
+    position: absolute;
+    inset: 220px 460px 220px 460px;
+    background: var(--ink-100);
+    border: 1px solid var(--ink-300);
+    overflow: hidden;
+  }
+  .photo-placeholder {
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient( 135deg, rgba(243,236,224,0.025) 0 14px, transparent 14px 28px),
+      linear-gradient(140deg, #2b2535 0%, #181421 50%, #0e0a16 100%);
+    display: grid; place-items: center;
+    color: var(--paper-500);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .photo-placeholder::after {
+    content: "";
+    position: absolute; inset: 24px;
+    border: 1px solid var(--ink-300);
+    pointer-events: none;
+  }
+  .photo-glow {
+    position: absolute; inset: 80px;
+    background: radial-gradient(circle, rgba(255,200,140,0.12), transparent 60%);
+    pointer-events: none;
+  }
+  .neighbors {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 132px;
+    padding: 24px 60px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 28px;
+    align-items: center;
+    background: linear-gradient(to top, rgba(7,6,10,0.95), transparent);
+    z-index: 7;
+  }
+  .neighbors .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .neighbors-rail {
+    display: flex; gap: 14px;
+    align-items: center;
+  }
+  .nb-card {
+    width: 110px; height: 76px;
+    background: var(--ink-100);
+    border: 1px solid var(--ink-300);
+    position: relative;
+    overflow: hidden;
+  }
+  .nb-card.active { border-color: var(--paper-400); }
+  .nb-card.photo .fill   { background: linear-gradient(135deg, #3a2f1e, #1a140b); }
+  .nb-card.audio .fill   { background: linear-gradient(135deg, #1d2240, #0a0e1f); }
+  .nb-card.moment .fill  { background: linear-gradient(135deg, #1a2a1d, #0a160e); }
+  .nb-card.note .fill    { background: linear-gradient(135deg, #2a161c, #14080d); }
+  .nb-card .fill { position: absolute; inset: 0; }
+  .nb-card .type-dot {
+    position: absolute; top: 8px; left: 8px;
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .nb-card.audio  .type-dot { background: var(--audio);  box-shadow: 0 0 8px var(--audio-glow); }
+  .nb-card.photo  .type-dot { background: var(--photo);  box-shadow: 0 0 8px var(--photo-glow); }
+  .nb-card.moment .type-dot { background: var(--moment); box-shadow: 0 0 8px var(--moment-glow); }
+  .nb-card.note   .type-dot { background: var(--note);   box-shadow: 0 0 8px var(--note-glow); }
+  .nb-card .stamp {
+    position: absolute; bottom: 6px; left: 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--paper-500);
+    letter-spacing: 0.1em;
+  }
+  .nb-card .miniwave {
+    position: absolute; bottom: 22px; left: 8px; right: 8px;
+    display: flex; align-items: end; gap: 1px; height: 18px;
+  }
+  .nb-card .miniwave i {
+    flex: 1; background: var(--audio); border-radius: 0.5px;
+  }
+  .nb-card .ntext {
+    position: absolute; top: 22px; left: 8px; right: 8px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--paper-700);
+    line-height: 1.2;
+  }
+
+  /* audio detail */
+  .audio-stage {
+    position: absolute;
+    left: 60px; right: 540px;
+    top: 230px; bottom: 220px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 28px;
+  }
+  .audio-stage .title {
+    font-family: var(--font-display);
+    font-size: 88px;
+    line-height: 1;
+    color: var(--paper-900);
+    letter-spacing: -0.01em;
+  }
+  .audio-stage .title em { font-style: italic; color: var(--paper-500); }
+  .audio-stage .duration {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-400);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-top: 16px;
+  }
+  .waveform {
+    display: flex; align-items: center; gap: 3px;
+    height: 220px;
+    padding: 0 0 0 0;
+    position: relative;
+  }
+  .waveform i {
+    width: 4px;
+    background: var(--audio);
+    border-radius: 1px;
+    display: block;
+    opacity: 0.85;
+  }
+  .waveform i.played { opacity: 1; box-shadow: 0 0 8px var(--audio-glow); }
+  .waveform i.up { background: var(--audio-glow); opacity: 0.5; }
+  .waveform .playhead {
+    position: absolute;
+    top: -8px; bottom: -8px;
+    width: 1px;
+    background: var(--ember);
+    box-shadow: 0 0 10px var(--ember);
+  }
+  .waveform .playhead::before {
+    content: "";
+    position: absolute; top: 0; left: -3px;
+    width: 7px; height: 7px;
+    background: var(--ember);
+    box-shadow: 0 0 10px var(--ember);
+    border-radius: 50%;
+  }
+  .transcript {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1.55;
+    color: var(--paper-500);
+    max-width: 900px;
+    letter-spacing: -0.005em;
+  }
+  .transcript .said {
+    color: var(--paper-900);
+  }
+  .transcript .next {
+    color: var(--paper-400);
+  }
+  .audio-side {
+    position: absolute;
+    right: 60px;
+    top: 240px;
+    width: 420px;
+    display: grid; gap: 24px;
+  }
+  .panel {
+    border: 1px solid var(--ink-300);
+    background: rgba(28,25,36,0.4);
+    padding: 22px 24px;
+    border-radius: 2px;
+    display: grid; gap: 12px;
+  }
+  .panel .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .panel .v {
+    font-family: var(--font-display);
+    font-size: 28px;
+    color: var(--paper-900);
+    font-style: italic;
+    line-height: 1.15;
+  }
+  .panel .sub {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--paper-500);
+    line-height: 1.4;
+  }
+  .panel .row {
+    display: flex; justify-content: space-between;
+    border-top: 1px solid var(--ink-300);
+    padding-top: 12px; margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.08em;
+  }
+  .panel .row b { color: var(--paper-900); font-weight: 400; }
+  .panel.tags {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .tag-chip {
+    border: 1px solid var(--ink-300);
+    border-radius: 100px;
+    padding: 5px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-700);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .tag-chip.add {
+    border-style: dashed;
+    color: var(--paper-400);
+  }
+  .tag-chip.add::before { content: "+ "; }
+
+  /* moment detail — cartographic */
+  .moment-stage {
+    position: absolute;
+    inset: 0;
+  }
+  .moment-map {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .moment-map .map-canvas { inset: 0; }
+  .moment-map::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 50%, transparent 0%, rgba(7,6,10,0.6) 50%, rgba(7,6,10,0.95) 100%),
+      linear-gradient(to top, rgba(7,6,10,0.85), rgba(7,6,10,0.0) 40%);
+    pointer-events: none;
+  }
+  .moment-pin {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    text-align: center;
+  }
+  .moment-pin .ring {
+    position: relative;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--moment) 0%, transparent 60%);
+    box-shadow: 0 0 40px 4px var(--moment-glow);
+    margin: 0 auto;
+  }
+  .moment-pin .ring::before {
+    content: "";
+    position: absolute; inset: 50% 50%;
+    width: 8px; height: 8px;
+    background: var(--moment);
+    box-shadow: 0 0 10px var(--moment);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .moment-pin .ring::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border: 1px solid var(--moment);
+    border-radius: 50%;
+    opacity: 0.5;
+  }
+  .moment-stage .center {
+    position: absolute;
+    left: 50%; bottom: 240px;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 6;
+  }
+  .moment-stage .center .place {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 96px;
+    color: var(--paper-900);
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .moment-stage .center .place small {
+    display: block;
+    font-size: 22px;
+    color: var(--paper-500);
+    margin-top: 12px;
+    font-style: normal;
+    font-family: var(--font-mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .moment-music {
+    position: absolute;
+    left: 60px; bottom: 200px;
+    width: 380px;
+    z-index: 6;
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+  .moment-music .cover {
+    width: 96px; height: 96px;
+    background: linear-gradient(135deg, #5a3a2a, #2a1810);
+    border: 1px solid var(--ink-300);
+    position: relative;
+    overflow: hidden;
+  }
+  .moment-music .cover::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(45deg, rgba(255,200,140,0.06) 0 8px, transparent 8px 16px);
+  }
+  .moment-music .text .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .moment-music .text .track {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 26px;
+    color: var(--paper-900);
+    margin-top: 6px;
+    line-height: 1.1;
+  }
+  .moment-music .text .artist {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--paper-500);
+    margin-top: 4px;
+  }
+  .moment-weather {
+    position: absolute;
+    right: 60px; bottom: 200px;
+    text-align: right;
+    z-index: 6;
+  }
+  .moment-weather .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .moment-weather .v {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 60px;
+    color: var(--paper-900);
+    line-height: 1;
+    margin-top: 6px;
+  }
+  .moment-weather .sub {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--paper-500);
+    margin-top: 6px;
+  }
+
+  /* note detail */
+  .note-stage {
+    position: absolute;
+    inset: 200px 200px 220px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 60px;
+  }
+  .note-stage .stamp {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .note-stage .body {
+    font-family: var(--font-display);
+    font-size: 80px;
+    line-height: 1.15;
+    color: var(--paper-900);
+    max-width: 1320px;
+    letter-spacing: -0.01em;
+  }
+  .note-stage .body em { font-style: italic; color: var(--paper-500); }
+  .note-stage .footer {
+    display: flex; justify-content: space-between; align-items: end;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-500);
+    letter-spacing: 0.06em;
+  }
+  .note-stage .footer .place {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 28px;
+    color: var(--paper-900);
+    letter-spacing: -0.005em;
+  }
+
+  /* ===== Slide 11: Motion + idle =========================================== */
+  .motion {
+    padding: 100px 100px 80px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 60px;
+  }
+  .motion .header { display: flex; justify-content: space-between; align-items: end; padding: 0 20px;}
+  .motion h2 {
+    font-family: var(--font-display);
+    font-size: 80px;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .motion h2 em { font-style: italic; color: var(--paper-500); }
+  .motion .lede { max-width: 540px; font-size: 16px; line-height: 1.6; color: var(--paper-500); }
+  .motion-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--ink-300);
+    border-left: 1px solid var(--ink-300);
+  }
+  .motion-cell {
+    border-right: 1px solid var(--ink-300);
+    border-bottom: 1px solid var(--ink-300);
+    padding: 40px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 24px;
+  }
+  .motion-cell .k {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .motion-cell .k b { color: var(--paper-900); font-weight: 400; margin-right: 14px; }
+  .motion-cell .v {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 28px;
+    line-height: 1.25;
+    color: var(--paper-700);
+  }
+  .motion-cell .v b {
+    font-style: normal;
+    font-family: var(--font-display);
+    color: var(--paper-900);
+    font-weight: 400;
+  }
+  .motion-cell .demo {
+    margin-top: auto;
+    height: 80px;
+    border-top: 1px solid var(--ink-300);
+    padding-top: 18px;
+    color: var(--paper-500);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .demo .anim-bar {
+    flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--ember), transparent 60%);
+  }
+
+  /* ===== Closing =========================================================== */
+  .closing {
+    display: grid; place-items: center;
+    text-align: center;
+    background: radial-gradient(ellipse at 50% 70%, #14111a 0%, #0a0810 60%, #050307 100%);
+  }
+  .closing h1 {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 200px;
+    color: var(--paper-900);
+    line-height: 1;
+    margin: 0 0 60px;
+    letter-spacing: -0.01em;
+  }
+  .closing .body {
+    font-family: var(--font-display);
+    font-size: 32px;
+    color: var(--paper-500);
+    max-width: 1100px;
+    line-height: 1.5;
+    text-wrap: balance;
+  }
+  .closing .body em { font-style: italic; color: var(--paper-700); }
+  .closing .stars { opacity: 0.5; }
+
+  /* clip path utility */
+  .clip-circle { clip-path: circle(50% at 50% 50%); }
+
+  /* ====================================================================== */
+  /* ==  Two strata slide                                                == */
+  /* ====================================================================== */
+  .strata {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+  }
+  .strata-col {
+    padding: 100px 90px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 38px;
+    position: relative;
+  }
+  .strata-col + .strata-col { border-left: 1px solid var(--ink-300); }
+  .strata-col .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .strata-col h2 {
+    font-family: var(--font-display);
+    font-size: 140px;
+    line-height: 0.92;
+    margin: 0;
+    color: var(--paper-900);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+  .strata-col h2 em { font-style: italic; color: var(--paper-500); }
+  .strata-col .descr {
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 1.45;
+    color: var(--paper-500);
+    max-width: 540px;
+    font-style: italic;
+  }
+  .strata-col .descr b {
+    font-weight: 400;
+    color: var(--paper-900);
+    font-style: normal;
+    font-family: var(--font-display);
+  }
+  .strata-types {
+    display: grid;
+    gap: 18px;
+  }
+  .strata-type {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 18px;
+    row-gap: 4px;
+    padding: 14px 0;
+    border-top: 1px solid var(--ink-300);
+  }
+  .strata-type .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    margin: 0;
+    grid-row: 1; grid-column: 1;
+    align-self: center;
+  }
+  .strata-type.audio  .dot { background: var(--audio);  box-shadow: 0 0 10px var(--audio-glow); }
+  .strata-type.moment .dot { background: var(--moment); box-shadow: 0 0 10px var(--moment-glow); }
+  .strata-type.note   .dot { background: var(--note);   box-shadow: 0 0 10px var(--note-glow); }
+  .strata-type.photo  .dot { background: var(--photo);  box-shadow: 0 0 10px var(--photo-glow); }
+  .strata-type .row1 {
+    grid-row: 1; grid-column: 2;
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 18px;
+  }
+  .strata-type .name {
+    font-family: var(--font-display);
+    font-size: 24px;
+    color: var(--paper-900);
+    font-style: italic;
+  }
+  .strata-type .gloss {
+    grid-row: 2; grid-column: 2;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--paper-500);
+  }
+  .strata-type .rate {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--paper-400);
+    white-space: nowrap;
+  }
+  .strata-props {
+    display: grid;
+    gap: 0;
+  }
+  .strata-prop {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    align-items: baseline;
+    gap: 18px;
+    padding: 12px 0;
+    border-top: 1px solid var(--ink-300);
+    font-size: 14px;
+  }
+  .strata-prop .k {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .strata-prop .v {
+    color: var(--paper-700);
+    line-height: 1.5;
+  }
+  .strata-prop .v b { color: var(--paper-900); font-weight: 400; }
+
+  /* ====================================================================== */
+  /* ==  Roll surface                                                    == */
+  /* ====================================================================== */
+  .roll {
+    position: absolute;
+    inset: 0;
+    background: var(--ink-000);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 56px 1fr 56px;
+    grid-template-rows: 130px 1fr 132px;
+    grid-template-areas:
+      "rail head head"
+      "rail grid scrubber"
+      "rail timeline timeline";
+  }
+  .roll-rail {
+    grid-area: rail;
+    border-right: 1px solid var(--ink-300);
+    background: var(--ink-050);
+    padding: 22px 0;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 24px;
+  }
+  .roll-head {
+    grid-area: head;
+    border-bottom: 1px solid var(--ink-300);
+    padding: 30px 48px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 32px;
+  }
+  .roll-head .left {
+    display: flex; align-items: baseline; gap: 32px;
+    min-width: 0;
+  }
+  .roll-head .surface-switch {
+    display: flex; gap: 0;
+    border: 1px solid var(--ink-300);
+    border-radius: 100px;
+    padding: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .roll-head .surface-switch a {
+    padding: 6px 18px;
+    border-radius: 100px;
+    color: var(--paper-500);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .roll-head .surface-switch a.on {
+    background: rgba(243,236,224,0.06);
+    color: var(--paper-900);
+    border: 1px solid var(--ink-300);
+  }
+  .roll-head .count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-500);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .roll-head .roll-title {
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-style: italic;
+    color: var(--paper-900);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .roll-grid-wrap {
+    grid-area: grid;
+    overflow: hidden;
+    position: relative;
+    padding: 36px 60px 64px;
+    mask-image: linear-gradient(to bottom, black 88%, transparent 100%);
+  }
+  .roll-day {
+    display: grid; gap: 16px;
+    margin-bottom: 44px;
+  }
+  .roll-day .day-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ink-300);
+  }
+  .roll-day .day-head .date {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 28px;
+    color: var(--paper-900);
+    line-height: 1;
+  }
+  .roll-day .day-head .date em { color: var(--paper-700); }
+  .roll-day .day-head .meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .roll-row {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 8px;
+  }
+  .roll-thumb {
+    aspect-ratio: 1;
+    background: var(--ink-100);
+    border: 1px solid var(--ink-300);
+    position: relative;
+    overflow: hidden;
+  }
+  .roll-thumb::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(135deg, rgba(243,236,224,0.025) 0 10px, transparent 10px 20px),
+      linear-gradient(135deg, var(--ink-200), var(--ink-100));
+  }
+  /* varied tones for visual differentiation */
+  .roll-thumb.t-warm::before { background: repeating-linear-gradient(135deg, rgba(255,200,140,0.04) 0 10px, transparent 10px 20px), linear-gradient(135deg, #3a2c1e, #1a1410); }
+  .roll-thumb.t-cool::before { background: repeating-linear-gradient(135deg, rgba(140,180,220,0.04) 0 10px, transparent 10px 20px), linear-gradient(135deg, #1c2230, #0e1218); }
+  .roll-thumb.t-green::before { background: repeating-linear-gradient(135deg, rgba(160,200,140,0.04) 0 10px, transparent 10px 20px), linear-gradient(135deg, #1f2820, #0e120e); }
+  .roll-thumb.t-rose::before { background: repeating-linear-gradient(135deg, rgba(200,160,180,0.04) 0 10px, transparent 10px 20px), linear-gradient(135deg, #2e1f25, #170c12); }
+  .roll-thumb.t-dim::before { background: repeating-linear-gradient(135deg, rgba(243,236,224,0.02) 0 10px, transparent 10px 20px), linear-gradient(135deg, #1a1820, #0a0810); opacity: 0.7; }
+  .roll-thumb.t-bright::before { background: repeating-linear-gradient(135deg, rgba(255,220,180,0.06) 0 10px, transparent 10px 20px), linear-gradient(135deg, #4a3a2a, #251a12); }
+
+  /* stack — session of N photos */
+  .roll-stack {
+    position: relative;
+    aspect-ratio: 1;
+  }
+  .roll-stack .roll-thumb {
+    position: absolute; inset: 0;
+    aspect-ratio: auto;
+  }
+  .roll-stack .stack-2 { transform: translate(6px, 6px) rotate(2.5deg); z-index: 1; opacity: 0.7; }
+  .roll-stack .stack-3 { transform: translate(-4px, 8px) rotate(-1.8deg); z-index: 2; opacity: 0.85; }
+  .roll-stack .stack-top { z-index: 3; }
+  .roll-stack .stack-badge {
+    position: absolute;
+    bottom: 6px; right: 6px;
+    z-index: 4;
+    background: rgba(7,6,10,0.88);
+    border: 1px solid var(--ink-300);
+    color: var(--paper-700);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 100px;
+  }
+  .roll-thumb.focus { border-color: var(--paper-400); box-shadow: 0 0 0 2px rgba(243,236,224,0.08); }
+  .roll-thumb .place-tag {
+    position: absolute;
+    bottom: 6px; left: 6px;
+    z-index: 4;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--paper-500);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(7,6,10,0.7);
+    padding: 2px 6px;
+  }
+
+  /* right-edge scrubber */
+  .roll-scrubber {
+    grid-area: scrubber;
+    border-left: 1px solid var(--ink-300);
+    background: var(--ink-050);
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding: 30px 0 30px;
+    position: relative;
+    gap: 8px;
+  }
+  .roll-scrubber .year {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--paper-400);
+  }
+  .roll-scrubber .year.on {
+    color: var(--ember);
+  }
+  .roll-scrubber .month-marks {
+    flex: 1;
+    width: 1px;
+    background: var(--ink-300);
+    position: relative;
+    margin: 4px 0;
+  }
+  .roll-scrubber .month-marks::before {
+    content: "";
+    position: absolute;
+    top: 30%; bottom: 14%;
+    left: -1px; right: -1px;
+    background: var(--paper-700);
+  }
+  .roll-scrubber .month-marks .now {
+    position: absolute;
+    bottom: 14%;
+    left: -4px;
+    width: 9px; height: 9px;
+    background: var(--ember);
+    box-shadow: 0 0 8px var(--ember);
+    border-radius: 50%;
+  }
+
+  /* contextual filter pills at top of roll */
+  .roll-floating {
+    display: flex; gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .roll-floating .pill {
+    border: 1px solid var(--ink-300);
+    border-radius: 100px;
+    padding: 6px 14px;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .roll-floating .pill.on { color: var(--paper-900); border-color: var(--paper-400); background: rgba(255,255,255,0.02); }
+
+  /* ====================================================================== */
+  /* ==  Session tile in atlas sidebar                                   == */
+  /* ====================================================================== */
+  .sb-tile.session {
+    grid-template-columns: 96px 1fr;
+    gap: 18px;
+  }
+  .sb-tile.session .session-stack {
+    width: 96px; height: 70px;
+    position: relative;
+  }
+  .sb-tile.session .session-stack .thumb {
+    position: absolute;
+    width: 78px; height: 60px;
+    border: 1px solid var(--ink-300);
+    background: linear-gradient(135deg, #3a2c1e, #1a1410);
+    overflow: hidden;
+  }
+  .sb-tile.session .session-stack .thumb::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255,200,140,0.04) 0 8px, transparent 8px 16px);
+  }
+  .sb-tile.session .session-stack .thumb.t1 { transform: rotate(-3deg); top: 6px; left: 0; opacity: 0.6; }
+  .sb-tile.session .session-stack .thumb.t2 { transform: rotate(2deg); top: 4px; left: 8px; opacity: 0.8; }
+  .sb-tile.session .session-stack .thumb.t3 { top: 0; left: 14px; }
+  .sb-tile.session .session-stack .count {
+    position: absolute;
+    bottom: -4px; right: 0;
+    background: var(--ink-100);
+    border: 1px solid var(--ink-300);
+    color: var(--paper-700);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 100px;
+    z-index: 4;
+  }
+
+  /* ====================================================================== */
+  /* ==  Photo detail v2 — full-bleed + filmstrip                        == */
+  /* ====================================================================== */
+  .detail.photo-v2 {
+    background: var(--ink-000);
+  }
+  .photo-bg-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 45%, rgba(180,140,90,0.18), transparent 60%),
+      repeating-linear-gradient(135deg, rgba(243,236,224,0.025) 0 16px, transparent 16px 32px),
+      linear-gradient(160deg, #382c1c 0%, #1a1410 55%, #0a0808 100%);
+  }
+  .photo-bleed-overlay {
+    position: absolute; inset: 0;
+    z-index: 4;
+    background:
+      linear-gradient(to bottom, rgba(7,6,10,0.7) 0%, transparent 18%, transparent 70%, rgba(7,6,10,0.85) 100%);
+    pointer-events: none;
+  }
+  /* tone the empty placeholder for the photo slot a warm parchment */
+  .detail.photo-v2 image-slot[id="memoir-photo-hero"]::part(placeholder) {
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 45%, rgba(180,140,90,0.18), transparent 60%),
+      repeating-linear-gradient(135deg, rgba(243,236,224,0.025) 0 16px, transparent 16px 32px),
+      linear-gradient(160deg, #382c1c 0%, #1a1410 55%, #0a0808 100%);
+  }
+  .photo-corner {
+    position: absolute;
+    z-index: 6;
+    color: var(--paper-700);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .photo-corner .label {
+    font-size: 9px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .photo-corner.tl { top: 100px; left: 48px; white-space: nowrap; }
+  .photo-corner.tr { top: 100px; right: 48px; text-align: right; white-space: nowrap; }
+
+  /* session indicator + filmstrip */
+  .session-bar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    z-index: 7;
+    padding: 22px 60px 26px;
+    background: linear-gradient(to top, rgba(7,6,10,0.92), rgba(7,6,10,0.0));
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 14px;
+  }
+  .session-bar .session-meta {
+    display: flex; align-items: baseline; gap: 18px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-wrap: wrap;
+  }
+  .session-bar .session-meta .session-title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--paper-900);
+    text-transform: none;
+    letter-spacing: -0.005em;
+  }
+  .session-bar .session-meta .session-title em { color: var(--paper-500); }
+  .filmstrip {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 6px;
+    height: 76px;
+  }
+  .filmstrip .frame {
+    aspect-ratio: auto;
+    background: var(--ink-100);
+    border: 1px solid var(--ink-300);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .filmstrip .frame::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,200,140,0.03) 0 8px, transparent 8px 16px),
+      linear-gradient(135deg, #382c1c, #1a1410);
+    opacity: 0.7;
+  }
+  .filmstrip .frame.dim::before { opacity: 0.35; }
+  .filmstrip .frame.active {
+    border-color: var(--paper-400);
+    box-shadow: 0 0 0 1px var(--paper-400), 0 0 12px rgba(255,220,180,0.2);
+  }
+  .filmstrip .frame.active::before { opacity: 1; }
+  .filmstrip .frame .n {
+    position: absolute;
+    bottom: 4px; right: 4px;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: rgba(243,236,224,0.45);
+    letter-spacing: 0.04em;
+  }
+
+  /* hover hint band below image, above session bar — tags + caption if any */
+  .photo-bottom-meta {
+    position: absolute;
+    left: 60px; right: 60px;
+    bottom: 200px;
+    z-index: 6;
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-500);
+    letter-spacing: 0.04em;
+  }
+  .photo-bottom-meta .lhs {
+    display: flex; gap: 6px;
+  }
+</style>
+</head>
+<body>
+
+<deck-stage width="1920" height="1080" no-rail>
+
+  <!-- ============================================================ -->
+  <!-- 01  COVER                                                    -->
+  <!-- ============================================================ -->
+  <section class="slide cover" data-screen-label="01 Cover">
+    <div class="stars"></div>
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="title">memoir · design proposal</div>
+    </div>
+
+    <div class="cover-body">
+      <h1>Memo<span class="em">i</span>r</h1>
+      <div class="lede">a quiet atlas of ordinary days</div>
+      <div class="meta-row">
+        <span><b>Brief</b>desktop direction</span>
+        <span><b>Stack</b>react · mantine · mapbox · three</span>
+        <span><b>Date</b>may 2026</span>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">01</span>cover<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 02  THESIS                                                   -->
+  <!-- ============================================================ -->
+  <section class="slide thesis" data-screen-label="02 Thesis">
+    <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="title">north star</div></div>
+    <div class="eyebrow">// north star</div>
+    <h2 class="statement">
+      Memoir should feel less like an <em>app</em>
+      and more like opening the <b style="--ember-bar: oklch(78% 0.13 55 / 0.28)">night sky</b>
+      over your own days &mdash; <em>celestial at rest,</em>
+      cartographic when you lean in.
+    </h2>
+    <p class="signoff">
+      One continuous gesture connects everything: the globe is the homepage,
+      the map is the same surface zoomed in, and a single entry is just the
+      moment you stopped to listen. Nothing else competes for attention.
+    </p>
+
+    <div class="slide-tag"><span class="num">02</span>thesis<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 03  THE SIX CALLS                                            -->
+  <!-- ============================================================ -->
+  <section class="slide calls" data-screen-label="03 Six Calls">
+    <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="title">six decisions</div></div>
+
+    <div class="header">
+      <h2>Six <em>calls</em>, made.</h2>
+      <p class="lede">The brief left six open decisions to the designer. Here is the position taken on each &mdash; the rest of the deck is what they look like in practice.</p>
+    </div>
+
+    <div class="calls-grid">
+      <div class="call">
+        <div class="num"><b>01</b>hero view</div>
+        <div class="q">"What does opening Memoir feel like in the first two seconds?"</div>
+        <div class="a">A <b>slow-rotating Earth at night.</b> Three.js stays, but it lives on the same Mapbox v3 globe projection &mdash; scroll-zoom carries you continuously from sky to street. The path back to the globe is just <span class="mono">↑</span>.</div>
+      </div>
+      <div class="call">
+        <div class="num"><b>02</b>browsing</div>
+        <div class="q">"Spatial, temporal, or both?"</div>
+        <div class="a"><b>Three surfaces, one time brush.</b> Sky (globe) for "all of it." Atlas (map + sparse spine sidebar) for "the walk I took in October." Roll (photo grid) for "that café I photographed last fall." One keystroke between them.</div>
+      </div>
+      <div class="call">
+        <div class="num"><b>03</b>detail view</div>
+        <div class="q">"What's on screen besides the media itself?"</div>
+        <div class="a"><b>Compositions, not a single template.</b> A photo is full-bleed with its session filmstrip; audio is a waveform with a reading transcript; moment is a cartographic crop with the song; note is purely typographic. Arrows flip neighbors (or frames within a session) with crossfade.</div>
+      </div>
+      <div class="call">
+        <div class="num"><b>04</b>density &amp; pattern</div>
+        <div class="q">"What does '47 times in this neighborhood' look like at a glance?"</div>
+        <div class="a">At low zoom, dots dissolve into <b>warm heatmap fog</b>. Age cools the palette (recent = ember, old = ash). Photos are what give the map its density &mdash; the deliberate spine entries are the named landmarks within it.</div>
+      </div>
+      <div class="call">
+        <div class="num"><b>05</b>facets &amp; filter</div>
+        <div class="q">"Where do facets live?"</div>
+        <div class="a">A quiet <b>left-edge rail</b> for everyday slicing; the <span class="mono">⌘K</span> command palette for power queries (<span class="mono">type:audio in:Lisbon during:autumn</span>). The sidebar's default is grouped by day, chronological.</div>
+      </div>
+      <div class="call">
+        <div class="num"><b>06</b>tone</div>
+        <div class="q">"How does this feel different from a productivity tool?"</div>
+        <div class="a">Editorial &mdash; not dashboard. Instrument Serif over Geist over JetBrains Mono. Near-black warm ink, four luminous embers, breath-slow motion. <b>UI fades after four seconds idle</b> &mdash; only the map remains.</div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">03</span>positions<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 04  TWO STRATA — ontology                                    -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="04 Two Strata">
+    <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="title">two strata</div></div>
+
+    <div class="strata">
+      <div class="strata-col">
+        <div class="eyebrow">// 01 · the spine</div>
+        <h2>Deliberate.</h2>
+        <div class="descr">
+          The three types the owner <b>chose</b> to mark. Sparse, intentional &mdash;
+          a few a day at most. Each one earns its own tile, its own
+          full-screen detail view, its own line in the timeline.
+        </div>
+
+        <div class="strata-types">
+          <div class="strata-type audio">
+            <div class="dot"></div>
+            <div class="row1"><div class="name">audio</div><div class="rate">~2 / day</div></div>
+            <div class="gloss">a stopped moment with a voice in it</div>
+          </div>
+          <div class="strata-type moment">
+            <div class="dot"></div>
+            <div class="row1"><div class="name">moment</div><div class="rate">~3 / day</div></div>
+            <div class="gloss">"I was here, this song was on, that was the weather"</div>
+          </div>
+          <div class="strata-type note">
+            <div class="dot"></div>
+            <div class="row1"><div class="name">note</div><div class="rate">~1 / day</div></div>
+            <div class="gloss">a written thought, often after the fact</div>
+          </div>
+        </div>
+
+        <div class="strata-props">
+          <div class="strata-prop">
+            <div class="k">where</div>
+            <div class="v">Atlas sidebar (chronological spine) · individual map dot · own detail view</div>
+          </div>
+          <div class="strata-prop">
+            <div class="k">find by</div>
+            <div class="v"><b>memory of when or where</b> &mdash; "the audio I made walking home in October"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="strata-col">
+        <div class="eyebrow">// 02 · the roll</div>
+        <h2><em>Ambient.</em></h2>
+        <div class="descr">
+          Photos &mdash; <b>dozens per day,</b> often in bursts at one spot.
+          Not peers to the spine. They live in their own surface, auto-grouped
+          into sessions, and they feed the map's density without ever
+          flooding the sidebar.
+        </div>
+
+        <div class="strata-types">
+          <div class="strata-type photo">
+            <div class="dot"></div>
+            <div class="row1"><div class="name">photo</div><div class="rate">~30 / day</div></div>
+            <div class="gloss">a captured frame &mdash; often part of a burst at one place</div>
+          </div>
+        </div>
+
+        <div class="strata-props">
+          <div class="strata-prop">
+            <div class="k">grouped as</div>
+            <div class="v"><b>sessions</b> &mdash; auto-clustered by time + place, like Google Photos. ~30 frames become 1 session tile.</div>
+          </div>
+          <div class="strata-prop">
+            <div class="k">where</div>
+            <div class="v"><b>Roll surface</b> (grid view) · map dots (density) · "neighbors" rail of nearby spine entries</div>
+          </div>
+          <div class="strata-prop">
+            <div class="k">in the atlas</div>
+            <div class="v">Sessions appear as <b>one tile per burst</b>, not one per frame</div>
+          </div>
+          <div class="strata-prop">
+            <div class="k">find by</div>
+            <div class="v"><b>scanning until your eye recognizes it</b> &mdash; "that café I shot last fall"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">04</span>two strata<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 04  DESIGN SYSTEM                                            -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="05 Design System">
+    <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="title">visual system</div></div>
+
+    <div class="ds">
+      <div class="ds-left">
+        <div class="head">
+          <div class="eyebrow">// visual system</div>
+          <h2>An <em>editorial</em><br/>library voice.</h2>
+          <div class="pair">Instrument Serif &middot; Geist &middot; JetBrains Mono</div>
+        </div>
+
+        <div class="ds-specimens">
+          <div class="specimen">
+            <div class="label">Display</div>
+            <div class="sample s-display">A <em>quiet</em> atlas<br/>of ordinary days</div>
+          </div>
+          <div class="specimen">
+            <div class="label">UI</div>
+            <div class="sample s-ui">Today, May 18 &mdash; 3 captured · Mission &amp; 20th</div>
+          </div>
+          <div class="specimen">
+            <div class="label">Data</div>
+            <div class="sample s-mono">37.7596° N · 122.4148° W · 14:22 · 18°C</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-right">
+        <div>
+          <div class="section-title">// embers — entry types</div>
+          <div class="swatch-row">
+            <div class="swatch audio">
+              <div class="dot"></div>
+              <div class="name">audio</div>
+              <div class="hex">oklch · 72 · 0.13 · 250</div>
+            </div>
+            <div class="swatch photo">
+              <div class="dot"></div>
+              <div class="name">photo</div>
+              <div class="hex">oklch · 78 · 0.13 · 55</div>
+            </div>
+            <div class="swatch moment">
+              <div class="dot"></div>
+              <div class="name">moment</div>
+              <div class="hex">oklch · 74 · 0.10 · 145</div>
+            </div>
+            <div class="swatch note">
+              <div class="dot"></div>
+              <div class="name">note</div>
+              <div class="hex">oklch · 74 · 0.10 · 15</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">// inks &mdash; warm near-black scale</div>
+          <div class="neutrals-row">
+            <div style="background:#07060a; color:#6a6358;">07060a</div>
+            <div style="background:#0c0a10; color:#6a6358;">0c0a10</div>
+            <div style="background:#131119; color:#8a8377;">131119</div>
+            <div style="background:#1c1924; color:#c8c0b3;">1c1924</div>
+            <div style="background:#f3ece0; color:#1c1924;">f3ece0</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">// motion &amp; tone</div>
+          <div class="principles">
+            <div class="principle">
+              <div class="k">Pace</div>
+              <div class="v">Breath-slow. 600&ndash;1200ms easings.</div>
+            </div>
+            <div class="principle">
+              <div class="k">Idle</div>
+              <div class="v">Chrome fades after 4 seconds &mdash; the map remains.</div>
+            </div>
+            <div class="principle">
+              <div class="k">Live</div>
+              <div class="v">New entries arrive with one ember pulse, then settle.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">05</span>system<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 05  HOME — globe                                             -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="06 Home — Globe">
+    <div class="screen home">
+      <div class="stars"></div>
+
+      <!-- top bar -->
+      <div class="home-top">
+        <div class="brand">memoir</div>
+        <div class="topnav">
+          <span>2,418 entries</span>
+          <span class="pill">search <span class="kbd">⌘ K</span></span>
+        </div>
+      </div>
+
+      <!-- facets rail left edge -->
+      <div class="facets-rail">
+        <div class="f-icon on">A</div>
+        <div class="f-icon">◷</div>
+        <div class="f-icon">◉</div>
+        <div class="f-divider"></div>
+        <div class="f-icon" style="color:var(--audio);border-color:var(--audio)">·</div>
+        <div class="f-icon" style="color:var(--photo);border-color:var(--photo)">·</div>
+        <div class="f-icon" style="color:var(--moment);border-color:var(--moment)">·</div>
+        <div class="f-icon" style="color:var(--note);border-color:var(--note)">·</div>
+      </div>
+
+      <!-- globe -->
+      <div class="globe-wrap">
+        <div class="globe-atmos"></div>
+        <div class="globe"></div>
+        <div class="globe-grid">
+          <svg viewBox="0 0 820 820">
+            <g fill="none" stroke="rgba(255,230,200,0.06)" stroke-width="0.8">
+              <!-- latitudes (ellipses) -->
+              <ellipse cx="410" cy="410" rx="380" ry="380"/>
+              <ellipse cx="410" cy="410" rx="380" ry="320"/>
+              <ellipse cx="410" cy="410" rx="380" ry="220"/>
+              <ellipse cx="410" cy="410" rx="380" ry="100"/>
+              <line x1="30" y1="410" x2="790" y2="410"/>
+              <!-- longitudes (ellipses rotated) -->
+              <ellipse cx="410" cy="410" rx="100" ry="380"/>
+              <ellipse cx="410" cy="410" rx="220" ry="380"/>
+              <ellipse cx="410" cy="410" rx="320" ry="380"/>
+              <line x1="410" y1="30" x2="410" y2="790"/>
+            </g>
+          </svg>
+        </div>
+        <div class="globe-rim"></div>
+
+        <!-- entry dots — positioned within globe-wrap (820x820) -->
+        <div class="dot photo"  style="left: 31%; top: 33%;"></div>
+        <div class="dot audio"  style="left: 36%; top: 38%;"></div>
+        <div class="dot moment" style="left: 28%; top: 41%; opacity: 0.7;"></div>
+        <div class="dot note"   style="left: 41%; top: 46%;"></div>
+        <div class="dot audio"  style="left: 38%; top: 31%; opacity: 0.6;"></div>
+        <div class="dot photo"  style="left: 24%; top: 50%;"></div>
+        <div class="dot cluster" style="left: 33%; top: 36%;"></div>
+
+        <div class="dot photo"  style="left: 56%; top: 30%;"></div>
+        <div class="dot photo big" style="left: 59%; top: 33%;"></div>
+        <div class="dot moment" style="left: 53%; top: 36%;"></div>
+        <div class="dot audio"  style="left: 62%; top: 38%;"></div>
+        <div class="dot note"   style="left: 60%; top: 41%; opacity: 0.7;"></div>
+        <div class="dot photo"  style="left: 58%; top: 28%; opacity: 0.6;"></div>
+        <div class="dot cluster" style="left: 59%; top: 33%;"></div>
+
+        <div class="dot moment" style="left: 64%; top: 56%;"></div>
+        <div class="dot audio"  style="left: 67%; top: 60%;"></div>
+        <div class="dot note"   style="left: 70%; top: 53%; opacity: 0.6;"></div>
+
+        <div class="dot photo"  style="left: 45%; top: 64%;"></div>
+        <div class="dot moment" style="left: 43%; top: 70%; opacity: 0.5;"></div>
+        <div class="dot audio"  style="left: 48%; top: 68%; opacity: 0.7;"></div>
+
+        <div class="dot photo"  style="left: 76%; top: 44%; opacity: 0.5;"></div>
+        <div class="dot audio"  style="left: 22%; top: 32%; opacity: 0.4;"></div>
+
+        <!-- live / now ember -->
+        <div class="dot now" style="left: 35%; top: 36%;"></div>
+      </div>
+
+      <!-- centered subtitle -->
+      <div class="home-quote">
+        <div class="num"><b>2,418</b> moments across <em>three years</em></div>
+      </div>
+
+      <!-- today bar -->
+      <div class="home-today">
+        <div class="when">today · monday · may 18</div>
+        <div class="what">3 captured</div>
+        <div class="meta">
+          <span class="live">live · mobile</span>
+          <span>· mission &amp; 20th st</span>
+          <span>· 18°C, clear</span>
+        </div>
+      </div>
+
+      <!-- sidebar peek right -->
+      <div class="home-sidebar">
+        <div class="sb-title"><span>Recent</span><span class="count">last 7 days</span></div>
+        <div class="sb-chips">
+          <span class="sb-chip active"><span class="ember audio"></span> audio</span>
+          <span class="sb-chip"><span class="ember photo"></span> photo</span>
+          <span class="sb-chip"><span class="ember moment"></span> moment</span>
+          <span class="sb-chip"><span class="ember note"></span> note</span>
+        </div>
+        <div class="sb-list">
+          <div class="sb-entry audio">
+            <div class="e-dot"></div>
+            <div>
+              <div class="when">14:22 · mission</div>
+              <div class="title">A voicemail to <em>nobody in particular</em></div>
+              <div class="place">37.7596° N · 122.4148° W</div>
+            </div>
+          </div>
+          <div class="sb-entry photo">
+            <div class="e-dot"></div>
+            <div>
+              <div class="when">11:08 · dolores park</div>
+              <div class="title">Eucalyptus, <em>still wet</em></div>
+              <div class="place">37.7595° N · 122.4269° W</div>
+            </div>
+          </div>
+          <div class="sb-entry moment">
+            <div class="e-dot"></div>
+            <div>
+              <div class="when">09:42 · church &amp; 18th</div>
+              <div class="title">Coffee, alone</div>
+              <div class="place">37.7613° N · 122.4276° W</div>
+            </div>
+          </div>
+          <div class="sb-entry note">
+            <div class="e-dot"></div>
+            <div>
+              <div class="when">yesterday · 22:11</div>
+              <div class="title">The argument was <em>about the salt.</em></div>
+              <div class="place">home · 37.762° N · 122.43° W</div>
+            </div>
+          </div>
+          <div class="sb-entry audio">
+            <div class="e-dot"></div>
+            <div>
+              <div class="when">yesterday · 16:30</div>
+              <div class="title">Pigeons, traffic, <em>someone's accordion</em></div>
+              <div class="place">embarcadero</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- bottom timeline ribbon -->
+      <div class="timeline">
+        <div class="tl-head">
+          <div class="left">
+            <span>// timeline</span>
+            <span class="scope">2023 — today</span>
+          </div>
+          <div class="right">
+            <span>scroll · zoom into map</span>
+            <span style="color:var(--paper-300)">|</span>
+            <span>↑ · return to sky</span>
+          </div>
+        </div>
+        <div class="tl-histogram">
+          <!-- 120 bars synthesized -->
+          <div class="bar" style="height:6px"></div><div class="bar" style="height:10px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:18px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:24px"></div>
+          <div class="bar" style="height:16px"></div><div class="bar" style="height:11px"></div><div class="bar" style="height:9px"></div><div class="bar" style="height:6px"></div>
+          <div class="bar" style="height:12px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:28px"></div><div class="bar" style="height:34px"></div>
+          <div class="bar" style="height:30px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:5px"></div><div class="bar" style="height:9px"></div><div class="bar" style="height:18px"></div><div class="bar" style="height:24px"></div>
+          <div class="bar" style="height:32px"></div><div class="bar" style="height:38px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:18px"></div>
+          <div class="bar" style="height:10px"></div><div class="bar" style="height:6px"></div><div class="bar" style="height:11px"></div><div class="bar" style="height:18px"></div>
+          <div class="bar" style="height:26px"></div><div class="bar" style="height:32px"></div><div class="bar" style="height:36px"></div><div class="bar" style="height:28px"></div>
+          <div class="bar" style="height:20px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:10px"></div><div class="bar" style="height:8px"></div>
+          <div class="bar active" style="height:14px"></div><div class="bar active" style="height:22px"></div><div class="bar active" style="height:30px"></div><div class="bar active" style="height:36px"></div>
+          <div class="bar active" style="height:40px"></div><div class="bar active" style="height:32px"></div><div class="bar active" style="height:24px"></div><div class="bar active" style="height:18px"></div>
+          <div class="bar active" style="height:14px"></div><div class="bar active" style="height:20px"></div><div class="bar active" style="height:28px"></div><div class="bar active" style="height:34px"></div>
+          <div class="bar active" style="height:30px"></div><div class="bar active" style="height:22px"></div><div class="bar active" style="height:16px"></div><div class="bar active" style="height:10px"></div>
+          <div class="bar active" style="height:8px"></div><div class="bar active" style="height:12px"></div><div class="bar active" style="height:18px"></div><div class="bar active" style="height:24px"></div>
+          <div class="bar active" style="height:30px"></div><div class="bar active" style="height:36px"></div><div class="bar active" style="height:32px"></div><div class="bar active" style="height:26px"></div>
+          <div class="bar active" style="height:20px"></div><div class="bar active" style="height:14px"></div><div class="bar active" style="height:10px"></div><div class="bar active" style="height:6px"></div>
+          <div class="bar active" style="height:9px"></div><div class="bar active" style="height:15px"></div><div class="bar active" style="height:22px"></div><div class="bar active" style="height:28px"></div>
+          <div class="bar active" style="height:34px"></div><div class="bar active" style="height:38px"></div><div class="bar active" style="height:32px"></div><div class="bar active" style="height:24px"></div>
+          <div class="bar active" style="height:16px"></div><div class="bar active" style="height:10px"></div><div class="bar" style="height:7px"></div><div class="bar" style="height:10px"></div>
+          <div class="bar" style="height:16px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:36px"></div>
+          <div class="bar" style="height:30px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:11px"></div><div class="bar" style="height:18px"></div><div class="bar" style="height:26px"></div><div class="bar" style="height:34px"></div>
+          <div class="bar" style="height:38px"></div><div class="bar" style="height:32px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:9px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:30px"></div>
+          <div class="bar" style="height:38px"></div><div class="bar" style="height:42px"></div><div class="bar" style="height:34px"></div><div class="bar" style="height:24px"></div>
+          <div class="bar" style="height:16px"></div><div class="bar" style="height:10px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:22px"></div>
+          <div class="bar" style="height:30px"></div><div class="bar" style="height:38px"></div><div class="bar recent" style="height:32px"></div><div class="bar recent" style="height:24px"></div>
+          <div class="bar recent" style="height:18px"></div><div class="bar recent" style="height:14px"></div><div class="bar recent" style="height:10px"></div><div class="bar recent" style="height:18px"></div>
+          <div class="bar recent" style="height:26px"></div><div class="bar recent" style="height:34px"></div><div class="bar recent" style="height:30px"></div><div class="bar recent" style="height:22px"></div>
+
+          <div class="tl-brush" style="left:33.3%; right:33.3%"></div>
+        </div>
+        <div class="tl-ticks">
+          <span>2023</span><span class="active">spring '24</span><span class="active">summer '24</span><span class="active">autumn '24</span><span class="active">winter '24</span><span>'25</span><span>'25</span><span class="now">today</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">06</span>home · the sky<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 06  BROWSE — map + sidebar + timeline                        -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="07 Browse — Atlas">
+    <div class="screen browse">
+
+      <!-- rail (left) -->
+      <div class="browse-rail">
+        <div class="rail-icon brand">m</div>
+        <div class="rail-icon on">≡</div>
+        <div class="rail-icon">◷</div>
+        <div class="rail-icon">◉</div>
+        <div class="rail-icon">⊕</div>
+        <div class="rail-icon">⌘</div>
+      </div>
+
+      <!-- top header -->
+      <div class="browse-head">
+        <div class="left">
+          <span class="scope-title">Mission &amp; Castro</span>
+          <span class="scope-sub">147 entries · oct '24 → today</span>
+        </div>
+        <div class="filter-row">
+          <span class="pill audio on"><span class="ember audio"></span> audio · 42</span>
+          <span class="pill photo on"><span class="ember photo"></span> photo · 23 sessions</span>
+          <span class="pill moment"><span class="ember moment"></span> moment</span>
+          <span class="pill note"><span class="ember note"></span> note</span>
+          <span class="pill" style="border-style:dashed">+ add facet</span>
+        </div>
+      </div>
+
+      <!-- map -->
+      <div class="browse-map">
+        <div class="map-canvas">
+          <!-- streets svg -->
+          <svg viewBox="0 0 1440 818" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <pattern id="grid-streets" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+                <line x1="0" y1="0" x2="120" y2="0" stroke="rgba(243,236,224,0.05)" stroke-width="0.6"/>
+                <line x1="0" y1="0" x2="0" y2="120" stroke="rgba(243,236,224,0.05)" stroke-width="0.6"/>
+              </pattern>
+            </defs>
+            <rect width="1440" height="818" fill="url(#grid-streets)"/>
+            <!-- big arterial streets -->
+            <g stroke="rgba(243,236,224,0.1)" stroke-width="2" fill="none">
+              <path d="M 0 280 Q 400 240 800 290 T 1440 320"/>
+              <path d="M 0 420 Q 400 400 820 440 T 1440 460"/>
+              <path d="M 0 580 Q 400 560 800 600 T 1440 620"/>
+              <path d="M 280 0 Q 240 300 320 818"/>
+              <path d="M 600 0 Q 580 400 640 818"/>
+              <path d="M 920 0 Q 900 400 960 818"/>
+              <path d="M 1180 0 Q 1160 400 1220 818"/>
+            </g>
+            <!-- thinner streets -->
+            <g stroke="rgba(243,236,224,0.04)" stroke-width="0.8" fill="none">
+              <path d="M 0 340 Q 400 320 800 360 T 1440 380"/>
+              <path d="M 0 500 Q 400 480 820 520 T 1440 540"/>
+              <path d="M 0 660 Q 400 640 800 680 T 1440 700"/>
+              <path d="M 0 200 Q 400 180 820 220 T 1440 240"/>
+              <path d="M 140 0 Q 120 400 180 818"/>
+              <path d="M 440 0 Q 420 400 480 818"/>
+              <path d="M 760 0 Q 740 400 800 818"/>
+              <path d="M 1060 0 Q 1040 400 1100 818"/>
+              <path d="M 1340 0 Q 1320 400 1380 818"/>
+            </g>
+            <!-- a few parks / blocks -->
+            <g fill="rgba(60,80,55,0.18)">
+              <path d="M 380 280 Q 480 260 540 310 Q 550 380 460 400 Q 380 380 380 320 Z"/>
+              <path d="M 1020 460 Q 1120 440 1180 490 Q 1180 560 1080 580 Q 1020 560 1020 500 Z"/>
+            </g>
+          </svg>
+
+          <!-- heatmap blobs -->
+          <div class="heat" style="left: 22%; top: 26%; width: 360px; height: 360px; background: var(--photo);"></div>
+          <div class="heat" style="left: 36%; top: 50%; width: 300px; height: 300px; background: var(--audio); opacity: 0.35;"></div>
+          <div class="heat" style="left: 60%; top: 36%; width: 280px; height: 280px; background: var(--moment); opacity: 0.28;"></div>
+          <div class="heat" style="left: 70%; top: 60%; width: 220px; height: 220px; background: var(--ember); opacity: 0.25;"></div>
+
+          <!-- place labels -->
+          <div class="place-label large" style="left: 18%; top: 18%;">Mission</div>
+          <div class="place-label" style="left: 22%; top: 26%;">20th &amp; Valencia</div>
+          <div class="place-label large" style="left: 56%; top: 30%;">Dolores Park</div>
+          <div class="place-label" style="left: 60%; top: 40%;">Church St</div>
+          <div class="place-label large" style="left: 38%; top: 64%;">Castro</div>
+          <div class="place-label" style="left: 12%; top: 56%;">Bernal Heights</div>
+          <div class="place-label" style="left: 78%; top: 24%;">Hayes Valley</div>
+          <div class="place-label" style="left: 75%; top: 70%;">Noe Valley</div>
+
+          <!-- map dots -->
+          <div class="map-dots">
+            <!-- Mission cluster -->
+            <div class="dot photo big" style="left: 22%; top: 30%;"></div>
+            <div class="dot photo" style="left: 24%; top: 28%;"></div>
+            <div class="dot photo" style="left: 20%; top: 32%;"></div>
+            <div class="dot audio" style="left: 23%; top: 34%;"></div>
+            <div class="dot audio" style="left: 26%; top: 31%;"></div>
+            <div class="dot moment" style="left: 20%; top: 28%;"></div>
+            <div class="dot photo" style="left: 26%; top: 35%; opacity: 0.6;"></div>
+            <div class="dot audio" style="left: 19%; top: 35%; opacity: 0.5;"></div>
+            <div class="dot photo" style="left: 22%; top: 38%; opacity: 0.4;"></div>
+
+            <!-- Dolores cluster -->
+            <div class="dot photo big" style="left: 56%; top: 36%;"></div>
+            <div class="dot photo" style="left: 58%; top: 34%;"></div>
+            <div class="dot audio" style="left: 54%; top: 38%;"></div>
+            <div class="dot moment" style="left: 60%; top: 36%;"></div>
+            <div class="dot note" style="left: 53%; top: 34%;"></div>
+            <div class="dot audio" style="left: 57%; top: 40%; opacity: 0.6;"></div>
+
+            <!-- Castro -->
+            <div class="dot photo" style="left: 42%; top: 68%;"></div>
+            <div class="dot audio" style="left: 38%; top: 66%;"></div>
+            <div class="dot note" style="left: 44%; top: 72%;"></div>
+            <div class="dot moment" style="left: 40%; top: 70%;"></div>
+
+            <!-- noe -->
+            <div class="dot photo" style="left: 75%; top: 66%;"></div>
+            <div class="dot audio" style="left: 78%; top: 64%; opacity: 0.7;"></div>
+            <div class="dot moment" style="left: 73%; top: 70%; opacity: 0.6;"></div>
+
+            <!-- bernal -->
+            <div class="dot photo" style="left: 12%; top: 60%; opacity: 0.4;"></div>
+            <div class="dot audio" style="left: 14%; top: 64%; opacity: 0.5;"></div>
+
+            <!-- hayes -->
+            <div class="dot photo" style="left: 78%; top: 26%; opacity: 0.5;"></div>
+            <div class="dot moment" style="left: 80%; top: 28%; opacity: 0.4;"></div>
+
+            <!-- now ember -->
+            <div class="dot now" style="left: 26%; top: 30%;"></div>
+          </div>
+
+          <!-- map compass / return -->
+          <div class="map-compass">
+            <span class="return">return to sky</span>
+            <div class="scale"><span>200 m</span><div class="bar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- sidebar -->
+      <div class="browse-sidebar">
+        <div class="sb-search">
+          <span>search · or filter</span>
+          <span class="kbd">⌘ K</span>
+        </div>
+
+        <div style="display: grid; gap: 28px; overflow: hidden; mask-image: linear-gradient(to bottom, black 78%, transparent 100%);">
+
+          <!-- live banner -->
+          <div class="live-banner">
+            <div class="head"><span>new · just now · from phone</span></div>
+            <div class="what">A voicemail to nobody in particular</div>
+          </div>
+
+          <div class="sb-day">
+            <div class="day-head">
+              <div class="date"><em>Today</em> · May 18</div>
+              <div class="count">3 entries · 1 session</div>
+            </div>
+
+            <div class="sb-tile audio focus">
+              <div class="stamp"><span class="ember-mini"></span>14:22</div>
+              <div>
+                <div class="title">A voicemail to <em>nobody in particular</em></div>
+                <div class="place">Mission · 20th &amp; Valencia</div>
+                <div class="miniwave">
+                  <i style="height:4px"></i><i style="height:8px"></i><i style="height:12px"></i><i style="height:9px"></i><i style="height:6px"></i><i style="height:11px"></i><i style="height:14px"></i><i style="height:8px"></i><i style="height:6px"></i><i style="height:10px"></i><i style="height:13px"></i><i style="height:9px"></i><i style="height:5px"></i><i style="height:8px"></i><i style="height:11px"></i><i style="height:7px"></i><i style="height:4px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:6px"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="sb-tile session photo">
+              <div class="session-stack">
+                <div class="thumb t1"></div>
+                <div class="thumb t2"></div>
+                <div class="thumb t3"></div>
+                <span class="count">12 frames</span>
+              </div>
+              <div>
+                <div class="stamp" style="margin-bottom: 6px;"><span class="ember-mini"></span>11:08 → 11:14</div>
+                <div class="title"><em>Dolores Park</em> · NW corner</div>
+                <div class="place">a session, 6 minutes</div>
+              </div>
+            </div>
+
+            <div class="sb-tile moment">
+              <div class="stamp"><span class="ember-mini"></span>09:42</div>
+              <div>
+                <div class="title">Coffee, alone</div>
+                <div class="place">Church &amp; 18th · Hearth</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sb-day">
+            <div class="day-head">
+              <div class="date">Sunday · May 17</div>
+              <div class="count">3 entries · 2 sessions</div>
+            </div>
+
+            <div class="sb-tile note">
+              <div class="stamp"><span class="ember-mini"></span>22:11</div>
+              <div>
+                <div class="title">The argument was <em>about the salt.</em></div>
+                <div class="place">Home</div>
+              </div>
+            </div>
+
+            <div class="sb-tile audio">
+              <div class="stamp"><span class="ember-mini"></span>16:30</div>
+              <div>
+                <div class="title">Pigeons, traffic, <em>someone's accordion</em></div>
+                <div class="place">Embarcadero · Pier 7</div>
+              </div>
+            </div>
+
+            <div class="sb-tile session photo">
+              <div class="session-stack">
+                <div class="thumb t1"></div>
+                <div class="thumb t2"></div>
+                <div class="thumb t3"></div>
+                <span class="count">22 frames</span>
+              </div>
+              <div>
+                <div class="stamp" style="margin-bottom: 6px;"><span class="ember-mini"></span>15:40 → 16:28</div>
+                <div class="title"><em>Embarcadero</em> · pier 7</div>
+                <div class="place">a session, 48 minutes</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- timeline at bottom -->
+      <div class="browse-timeline">
+        <div class="timeline" style="position: absolute; inset: 0; background: transparent;">
+          <div class="tl-head">
+            <div class="left">
+              <span>// timeline</span>
+              <span class="scope">brush to filter</span>
+            </div>
+            <div class="right">
+              <span>147 entries in selection</span>
+              <span style="color:var(--paper-300)">|</span>
+              <span>↑ · return to sky</span>
+            </div>
+          </div>
+          <div class="tl-histogram">
+            <div class="bar" style="height:4px"></div><div class="bar" style="height:8px"></div><div class="bar" style="height:12px"></div><div class="bar" style="height:7px"></div>
+            <div class="bar" style="height:16px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:28px"></div><div class="bar" style="height:22px"></div>
+            <div class="bar" style="height:14px"></div><div class="bar" style="height:9px"></div><div class="bar" style="height:7px"></div><div class="bar" style="height:5px"></div>
+            <div class="bar" style="height:10px"></div><div class="bar" style="height:18px"></div><div class="bar" style="height:26px"></div><div class="bar" style="height:32px"></div>
+            <div class="bar" style="height:28px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:12px"></div><div class="bar" style="height:7px"></div>
+            <div class="bar" style="height:5px"></div><div class="bar" style="height:8px"></div><div class="bar" style="height:16px"></div><div class="bar" style="height:22px"></div>
+            <div class="bar" style="height:30px"></div><div class="bar" style="height:36px"></div><div class="bar" style="height:28px"></div><div class="bar" style="height:16px"></div>
+            <div class="bar" style="height:9px"></div><div class="bar" style="height:6px"></div><div class="bar" style="height:10px"></div><div class="bar" style="height:16px"></div>
+            <div class="bar" style="height:24px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:34px"></div><div class="bar" style="height:26px"></div>
+            <div class="bar" style="height:18px"></div><div class="bar" style="height:13px"></div><div class="bar" style="height:9px"></div><div class="bar" style="height:7px"></div>
+            <div class="bar active" style="height:12px"></div><div class="bar active" style="height:20px"></div><div class="bar active" style="height:28px"></div><div class="bar active" style="height:34px"></div>
+            <div class="bar active" style="height:38px"></div><div class="bar active" style="height:30px"></div><div class="bar active" style="height:22px"></div><div class="bar active" style="height:16px"></div>
+            <div class="bar active" style="height:12px"></div><div class="bar active" style="height:18px"></div><div class="bar active" style="height:26px"></div><div class="bar active" style="height:32px"></div>
+            <div class="bar active" style="height:28px"></div><div class="bar active" style="height:20px"></div><div class="bar active" style="height:14px"></div><div class="bar active" style="height:9px"></div>
+            <div class="bar active" style="height:7px"></div><div class="bar active" style="height:10px"></div><div class="bar active" style="height:16px"></div><div class="bar active" style="height:22px"></div>
+            <div class="bar active" style="height:28px"></div><div class="bar active" style="height:34px"></div><div class="bar active" style="height:30px"></div><div class="bar active" style="height:24px"></div>
+            <div class="bar active" style="height:18px"></div><div class="bar active" style="height:13px"></div><div class="bar active" style="height:9px"></div><div class="bar active" style="height:6px"></div>
+            <div class="bar active" style="height:8px"></div><div class="bar active" style="height:13px"></div><div class="bar active" style="height:20px"></div><div class="bar active" style="height:26px"></div>
+            <div class="bar active" style="height:32px"></div><div class="bar active" style="height:36px"></div><div class="bar active" style="height:30px"></div><div class="bar active" style="height:22px"></div>
+            <div class="bar active" style="height:14px"></div><div class="bar active" style="height:9px"></div><div class="bar" style="height:6px"></div><div class="bar" style="height:9px"></div>
+            <div class="bar" style="height:14px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:28px"></div><div class="bar" style="height:34px"></div>
+            <div class="bar" style="height:28px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:13px"></div><div class="bar" style="height:7px"></div>
+            <div class="bar" style="height:10px"></div><div class="bar" style="height:16px"></div><div class="bar" style="height:24px"></div><div class="bar" style="height:32px"></div>
+            <div class="bar" style="height:36px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:13px"></div>
+            <div class="bar" style="height:8px"></div><div class="bar" style="height:13px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:28px"></div>
+            <div class="bar" style="height:36px"></div><div class="bar" style="height:40px"></div><div class="bar" style="height:32px"></div><div class="bar" style="height:22px"></div>
+            <div class="bar" style="height:14px"></div><div class="bar" style="height:9px"></div><div class="bar" style="height:13px"></div><div class="bar" style="height:20px"></div>
+            <div class="bar" style="height:28px"></div><div class="bar" style="height:36px"></div><div class="bar recent" style="height:30px"></div><div class="bar recent" style="height:22px"></div>
+            <div class="bar recent" style="height:16px"></div><div class="bar recent" style="height:13px"></div><div class="bar recent" style="height:9px"></div><div class="bar recent" style="height:16px"></div>
+            <div class="bar recent" style="height:24px"></div><div class="bar recent" style="height:32px"></div><div class="bar recent" style="height:28px"></div><div class="bar recent" style="height:20px"></div>
+
+            <div class="tl-brush" style="left:33%; right:18%"></div>
+          </div>
+          <div class="tl-ticks">
+            <span>2023</span><span>spring '24</span><span>summer '24</span><span class="active">autumn '24</span><span class="active">winter '24</span><span class="active">spring '25</span><span class="active">summer '25</span><span class="now">today</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">07</span>browse · the atlas<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 08  ROLL — photos                                            -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="08 Roll — Photos">
+    <div class="screen">
+      <div class="roll">
+
+        <!-- left rail (shared with atlas) -->
+        <div class="roll-rail">
+          <div class="rail-icon brand">m</div>
+          <div class="rail-icon">≡</div>
+          <div class="rail-icon">◷</div>
+          <div class="rail-icon on">⊞</div>
+          <div class="rail-icon">⊕</div>
+          <div class="rail-icon">⌘</div>
+        </div>
+
+        <!-- top header with surface switcher -->
+        <div class="roll-head">
+          <div class="left">
+            <span class="roll-title">The Roll</span>
+            <span class="count">11,402 frames · 384 sessions</span>
+          </div>
+          <div class="surface-switch">
+            <a>Sky</a>
+            <a>Atlas</a>
+            <a class="on">Roll</a>
+          </div>
+        </div>
+
+        <!-- the photo grid -->
+        <div class="roll-grid-wrap">
+
+          <!-- contextual filters at top -->
+          <div class="roll-floating">
+            <span class="pill on">on this day</span>
+            <span class="pill">near here</span>
+            <span class="pill">just photos</span>
+            <span class="pill">sessions only</span>
+          </div>
+
+          <div class="roll-day">
+            <div class="day-head">
+              <div class="date"><em>Today</em> · Monday May 18</div>
+              <div class="meta">1 session · 12 frames · mission &amp; dolores</div>
+            </div>
+            <div class="roll-row">
+              <!-- session stack -->
+              <div class="roll-stack">
+                <div class="roll-thumb t-warm stack-2"></div>
+                <div class="roll-thumb t-warm stack-3"></div>
+                <div class="roll-thumb t-warm stack-top focus"><image-slot id="memoir-roll-today-session" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+                <span class="stack-badge">12</span>
+                <span class="place-tag">dolores</span>
+              </div>
+              <div class="roll-thumb t-cool"><image-slot id="memoir-roll-today-2" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-warm"><image-slot id="memoir-roll-today-3" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-green"><image-slot id="memoir-roll-today-4" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-dim"><image-slot id="memoir-roll-today-5" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-bright"><image-slot id="memoir-roll-today-6" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-warm"><image-slot id="memoir-roll-today-7" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-cool"><image-slot id="memoir-roll-today-8" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-rose"><image-slot id="memoir-roll-today-9" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+              <div class="roll-thumb t-green"><image-slot id="memoir-roll-today-10" placeholder="" shape="rect" style="position:absolute;inset:0;color:rgba(243,236,224,0.4);"></image-slot></div>
+            </div>
+          </div>
+
+          <div class="roll-day">
+            <div class="day-head">
+              <div class="date">Sunday May 17</div>
+              <div class="meta">3 sessions · 47 frames · mission · embarcadero · home</div>
+            </div>
+            <div class="roll-row">
+              <div class="roll-stack">
+                <div class="roll-thumb t-cool stack-2"></div>
+                <div class="roll-thumb t-cool stack-3"></div>
+                <div class="roll-thumb t-cool stack-top"></div>
+                <span class="stack-badge">22</span>
+                <span class="place-tag">embarcadero</span>
+              </div>
+              <div class="roll-thumb t-cool"></div>
+              <div class="roll-thumb t-dim"></div>
+              <div class="roll-thumb t-bright"></div>
+              <div class="roll-thumb t-warm"></div>
+              <div class="roll-stack">
+                <div class="roll-thumb t-warm stack-2"></div>
+                <div class="roll-thumb t-warm stack-top"></div>
+                <span class="stack-badge">8</span>
+                <span class="place-tag">mission</span>
+              </div>
+              <div class="roll-thumb t-warm"></div>
+              <div class="roll-thumb t-rose"></div>
+              <div class="roll-stack">
+                <div class="roll-thumb t-rose stack-3"></div>
+                <div class="roll-thumb t-rose stack-top"></div>
+                <span class="stack-badge">17</span>
+                <span class="place-tag">home</span>
+              </div>
+              <div class="roll-thumb t-rose"></div>
+            </div>
+          </div>
+
+          <div class="roll-day">
+            <div class="day-head">
+              <div class="date">Saturday May 16</div>
+              <div class="meta">2 sessions · 31 frames · noe · castro</div>
+            </div>
+            <div class="roll-row">
+              <div class="roll-stack">
+                <div class="roll-thumb t-green stack-2"></div>
+                <div class="roll-thumb t-green stack-3"></div>
+                <div class="roll-thumb t-green stack-top"></div>
+                <span class="stack-badge">14</span>
+                <span class="place-tag">noe valley</span>
+              </div>
+              <div class="roll-thumb t-green"></div>
+              <div class="roll-thumb t-green"></div>
+              <div class="roll-thumb t-dim"></div>
+              <div class="roll-thumb t-warm"></div>
+              <div class="roll-thumb t-bright"></div>
+              <div class="roll-stack">
+                <div class="roll-thumb t-warm stack-2"></div>
+                <div class="roll-thumb t-warm stack-top"></div>
+                <span class="stack-badge">17</span>
+                <span class="place-tag">castro</span>
+              </div>
+              <div class="roll-thumb t-warm"></div>
+              <div class="roll-thumb t-warm"></div>
+              <div class="roll-thumb t-rose"></div>
+            </div>
+          </div>
+
+          <div class="roll-day">
+            <div class="day-head">
+              <div class="date">Friday May 15</div>
+              <div class="meta">4 sessions · 68 frames</div>
+            </div>
+            <div class="roll-row">
+              <div class="roll-stack">
+                <div class="roll-thumb t-bright stack-2"></div>
+                <div class="roll-thumb t-bright stack-3"></div>
+                <div class="roll-thumb t-bright stack-top"></div>
+                <span class="stack-badge">23</span>
+                <span class="place-tag">mission</span>
+              </div>
+              <div class="roll-thumb t-warm"></div>
+              <div class="roll-thumb t-dim"></div>
+              <div class="roll-thumb t-cool"></div>
+              <div class="roll-stack">
+                <div class="roll-thumb t-cool stack-2"></div>
+                <div class="roll-thumb t-cool stack-top"></div>
+                <span class="stack-badge">11</span>
+                <span class="place-tag">hayes</span>
+              </div>
+              <div class="roll-thumb t-cool"></div>
+              <div class="roll-thumb t-green"></div>
+              <div class="roll-thumb t-green"></div>
+              <div class="roll-thumb t-rose"></div>
+              <div class="roll-thumb t-rose"></div>
+            </div>
+          </div>
+
+          <!-- floating filters moved to top -->
+        </div>
+
+        <!-- right-edge year scrubber -->
+        <div class="roll-scrubber">
+          <div class="year">'23</div>
+          <div class="year">'24</div>
+          <div class="month-marks">
+            <div class="now"></div>
+          </div>
+          <div class="year on">'25</div>
+          <div class="year">'26</div>
+        </div>
+
+        <!-- bottom timeline ribbon -->
+        <div class="browse-timeline">
+          <div class="timeline" style="position: absolute; inset: 0; background: transparent;">
+            <div class="tl-head">
+              <div class="left">
+                <span>// roll · time</span>
+                <span class="scope">brush by day</span>
+              </div>
+              <div class="right">
+                <span>11,402 frames in selection</span>
+                <span style="color:var(--paper-300)">|</span>
+                <span>1 · sky &nbsp; 2 · atlas &nbsp; 3 · roll</span>
+              </div>
+            </div>
+            <div class="tl-histogram">
+              <div class="bar" style="height:6px"></div><div class="bar" style="height:9px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:18px"></div>
+              <div class="bar" style="height:22px"></div><div class="bar" style="height:26px"></div><div class="bar" style="height:32px"></div><div class="bar" style="height:28px"></div>
+              <div class="bar" style="height:18px"></div><div class="bar" style="height:11px"></div><div class="bar" style="height:8px"></div><div class="bar" style="height:6px"></div>
+              <div class="bar" style="height:13px"></div><div class="bar" style="height:21px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:34px"></div>
+              <div class="bar" style="height:30px"></div><div class="bar" style="height:24px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:9px"></div>
+              <div class="bar" style="height:7px"></div><div class="bar" style="height:11px"></div><div class="bar" style="height:18px"></div><div class="bar" style="height:24px"></div>
+              <div class="bar" style="height:32px"></div><div class="bar" style="height:38px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:18px"></div>
+              <div class="bar" style="height:10px"></div><div class="bar" style="height:7px"></div><div class="bar" style="height:13px"></div><div class="bar" style="height:20px"></div>
+              <div class="bar" style="height:26px"></div><div class="bar" style="height:32px"></div><div class="bar" style="height:36px"></div><div class="bar" style="height:28px"></div>
+              <div class="bar" style="height:22px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:10px"></div><div class="bar" style="height:8px"></div>
+              <div class="bar" style="height:14px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:36px"></div>
+              <div class="bar" style="height:38px"></div><div class="bar" style="height:32px"></div><div class="bar" style="height:24px"></div><div class="bar" style="height:18px"></div>
+              <div class="bar" style="height:14px"></div><div class="bar" style="height:20px"></div><div class="bar" style="height:28px"></div><div class="bar" style="height:32px"></div>
+              <div class="bar" style="height:28px"></div><div class="bar active" style="height:22px"></div><div class="bar active" style="height:16px"></div><div class="bar active" style="height:11px"></div>
+              <div class="bar active" style="height:8px"></div><div class="bar active" style="height:12px"></div><div class="bar active" style="height:18px"></div><div class="bar active" style="height:24px"></div>
+              <div class="bar active" style="height:30px"></div><div class="bar active" style="height:36px"></div><div class="bar active" style="height:32px"></div><div class="bar active" style="height:26px"></div>
+              <div class="bar active" style="height:20px"></div><div class="bar active" style="height:14px"></div><div class="bar active" style="height:11px"></div><div class="bar active" style="height:7px"></div>
+              <div class="bar active" style="height:10px"></div><div class="bar active" style="height:15px"></div><div class="bar active" style="height:22px"></div><div class="bar active" style="height:28px"></div>
+              <div class="bar active" style="height:34px"></div><div class="bar active" style="height:38px"></div><div class="bar active" style="height:32px"></div><div class="bar active" style="height:24px"></div>
+              <div class="bar active" style="height:16px"></div><div class="bar active" style="height:10px"></div><div class="bar" style="height:7px"></div><div class="bar" style="height:11px"></div>
+              <div class="bar" style="height:16px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:36px"></div>
+              <div class="bar" style="height:32px"></div><div class="bar" style="height:24px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:8px"></div>
+              <div class="bar" style="height:11px"></div><div class="bar" style="height:18px"></div><div class="bar" style="height:26px"></div><div class="bar" style="height:34px"></div>
+              <div class="bar" style="height:38px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:14px"></div>
+              <div class="bar" style="height:9px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:22px"></div><div class="bar" style="height:30px"></div>
+              <div class="bar" style="height:38px"></div><div class="bar" style="height:42px"></div><div class="bar" style="height:34px"></div><div class="bar" style="height:24px"></div>
+              <div class="bar" style="height:16px"></div><div class="bar" style="height:10px"></div><div class="bar" style="height:14px"></div><div class="bar" style="height:22px"></div>
+              <div class="bar" style="height:30px"></div><div class="bar" style="height:38px"></div><div class="bar recent" style="height:32px"></div><div class="bar recent" style="height:24px"></div>
+              <div class="bar recent" style="height:18px"></div><div class="bar recent" style="height:14px"></div><div class="bar recent" style="height:10px"></div><div class="bar recent" style="height:18px"></div>
+              <div class="bar recent" style="height:26px"></div><div class="bar recent" style="height:34px"></div><div class="bar recent" style="height:30px"></div><div class="bar recent" style="height:22px"></div>
+
+              <div class="tl-brush" style="left:43%; right:8%"></div>
+            </div>
+            <div class="tl-ticks">
+              <span>2023</span><span>spring '24</span><span>summer '24</span><span>autumn '24</span><span class="active">winter '24</span><span class="active">spring '25</span><span class="active">summer '25</span><span class="now">today</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">08</span>roll · the photos<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 09  DETAIL — photo session (full-bleed)                      -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="09 Detail — Photo session">
+    <div class="screen detail photo-v2">
+
+      <!-- empty-state toned background (visible only when slot is unfilled) -->
+      <div class="photo-bg-placeholder"></div>
+
+      <!-- the user's photo fills the slide -->
+      <image-slot id="memoir-photo-hero"
+                  placeholder="DROP A PHOTO HERE  ·  hero · full-bleed"
+                  shape="rect"
+                  style="position: absolute; inset: 0; z-index: 2; color: rgba(243,236,224,0.5);"></image-slot>
+      <!-- legibility overlay above the photo -->
+      <div class="photo-bleed-overlay"></div>
+
+      <!-- top chrome -->
+      <div class="detail-chrome">
+        <div class="detail-back">
+          <span class="esc">esc</span><span>back to atlas</span>
+        </div>
+        <div class="detail-pager">
+          <span>session 14 of 23 · dolores</span>
+          <div class="nav"><b>↑</b><b>↓</b></div>
+        </div>
+      </div>
+
+      <!-- corner metadata — quiet, fades after 4s idle -->
+      <div class="photo-corner tl">
+        <span class="label">// place</span>
+        <div>Dolores Park · NW corner</div>
+        <div>37.7595° N · 122.4269° W</div>
+      </div>
+      <div class="photo-corner tr">
+        <span class="label">// captured</span>
+        <div>Sun · May 18, 2026 · 11:11:08</div>
+        <div>14°C · light rain · f/2.8 · 1/250s</div>
+      </div>
+
+      <!-- caption (only because a user wrote one — most photos won't have this) -->
+      <div class="photo-bottom-meta">
+        <div style="font-family: var(--font-display); font-style: italic; font-size: 22px; color: var(--paper-900); letter-spacing: -0.005em;">"Eucalyptus, still wet."</div>
+        <div class="lhs">
+          <span class="tag-chip">trees</span>
+          <span class="tag-chip">rain</span>
+          <span class="tag-chip add">tag</span>
+        </div>
+      </div>
+
+      <!-- session bar — the burst this frame belongs to -->
+      <div class="session-bar">
+        <div class="session-meta">
+          <span style="font-family: var(--font-display); font-style: italic; font-size: 22px; color: var(--paper-900); text-transform: none; letter-spacing: -0.005em; line-height: 1;"><em style="color: var(--paper-500);">Dolores Park</em> · NW corner</span>
+          <span style="color: var(--paper-300);">|</span>
+          <span>11:08 → 11:14</span>
+          <span style="color: var(--paper-400);">6 minutes</span>
+          <span style="color: var(--paper-700);">12 frames</span>
+          <span style="margin-left: auto; color: var(--paper-400);">← → · flip within session &nbsp;&nbsp; ↑ ↓ · next entry</span>
+        </div>
+        <div class="filmstrip">
+          <div class="frame dim"><image-slot id="memoir-frame-01" placeholder="01" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">01</div></div>
+          <div class="frame dim"><image-slot id="memoir-frame-02" placeholder="02" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">02</div></div>
+          <div class="frame dim"><image-slot id="memoir-frame-03" placeholder="03" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">03</div></div>
+          <div class="frame dim"><image-slot id="memoir-frame-04" placeholder="04" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">04</div></div>
+          <div class="frame"><image-slot id="memoir-frame-05" placeholder="05" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">05</div></div>
+          <div class="frame"><image-slot id="memoir-frame-06" placeholder="06" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">06</div></div>
+          <div class="frame active"><image-slot id="memoir-frame-07" placeholder="07 · active" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">07</div></div>
+          <div class="frame"><image-slot id="memoir-frame-08" placeholder="08" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">08</div></div>
+          <div class="frame"><image-slot id="memoir-frame-09" placeholder="09" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">09</div></div>
+          <div class="frame dim"><image-slot id="memoir-frame-10" placeholder="10" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">10</div></div>
+          <div class="frame dim"><image-slot id="memoir-frame-11" placeholder="11" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">11</div></div>
+          <div class="frame dim"><image-slot id="memoir-frame-12" placeholder="12" shape="rect" style="position:absolute;inset:0;"></image-slot><div class="n">12</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">09</span>detail · photo<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 08  DETAIL — audio                                           -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="10 Detail — Audio">
+    <div class="screen detail audio-detail">
+      <div class="detail-chrome">
+        <div class="detail-back">
+          <span class="esc">esc</span><span>back to atlas</span>
+        </div>
+        <div class="detail-pager">
+          <span>22 of 147 · mission</span>
+          <div class="nav"><b>←</b><b>→</b></div>
+        </div>
+      </div>
+
+      <div class="meta-tl meta">
+        <span class="label">// place</span>
+        <div class="v big">Mission · 20th &amp; Valencia</div>
+      </div>
+
+      <div class="meta-tr meta">
+        <span class="label">// captured</span>
+        <div class="v big">Mon · May 18, 2026</div>
+        <div class="v" style="font-family: var(--font-mono); margin-top: 6px;">14:22 · 02:46 duration</div>
+      </div>
+
+      <!-- left: title + waveform + transcript -->
+      <div class="audio-stage">
+        <div>
+          <div class="title">A voicemail to <em>nobody in particular</em></div>
+          <div class="duration">02:46 · whisper transcribed</div>
+        </div>
+
+        <div class="waveform" id="wf">
+          <!-- 80 bars synthesized -->
+        </div>
+
+        <div class="transcript">
+          <span class="said">"I keep thinking about the way the light was on the kitchen tile this morning,</span>
+          <span class="said">and how I almost called you about it, and then I didn't.</span>
+          <span> </span>
+          <span class="next">I don't know why I'm recording this. Maybe because there's no one to tell. Maybe because — "</span>
+        </div>
+      </div>
+
+      <!-- right: context panels -->
+      <div class="audio-side">
+        <div class="panel">
+          <div class="label">// weather</div>
+          <div class="v">18°C · clear</div>
+          <div class="sub">south wind, 4 km/h · humidity 62%</div>
+          <div class="row"><span>sunset</span><b>20:14</b></div>
+        </div>
+        <div class="panel">
+          <div class="label">// place</div>
+          <div class="v">20th &amp; Valencia</div>
+          <div class="sub">37.7596° N · 122.4148° W · accuracy 8m</div>
+          <div class="row"><span>visited</span><b>47×</b></div>
+        </div>
+        <div class="panel tags">
+          <span class="tag-chip">voice</span>
+          <span class="tag-chip">walking</span>
+          <span class="tag-chip">alone</span>
+          <span class="tag-chip">mission</span>
+          <span class="tag-chip add">tag</span>
+        </div>
+      </div>
+
+      <!-- neighbors -->
+      <div class="neighbors">
+        <span class="label">// neighbors</span>
+        <div class="neighbors-rail">
+          <div class="nb-card photo"><div class="fill"></div><div class="type-dot"></div><div class="stamp">11:08 · dolores</div></div>
+          <div class="nb-card moment"><div class="fill"></div><div class="type-dot"></div><div class="stamp">12:06 · castro</div></div>
+          <div class="nb-card note"><div class="fill"></div><div class="type-dot"></div><div class="ntext">"a sign that just says open"</div><div class="stamp">14:02 · mission</div></div>
+          <div class="nb-card audio active">
+            <div class="fill"></div><div class="type-dot"></div>
+            <div class="miniwave"><i style="height:40%"></i><i style="height:60%"></i><i style="height:30%"></i><i style="height:80%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:70%"></i><i style="height:90%"></i><i style="height:50%"></i><i style="height:75%"></i><i style="height:45%"></i><i style="height:65%"></i><i style="height:30%"></i></div>
+            <div class="stamp">14:22 · mission</div>
+          </div>
+          <div class="nb-card photo"><div class="fill"></div><div class="type-dot"></div><div class="stamp">15:30 · noe</div></div>
+          <div class="nb-card moment"><div class="fill"></div><div class="type-dot"></div><div class="stamp">16:08 · noe</div></div>
+          <div class="nb-card audio"><div class="fill"></div><div class="type-dot"></div><div class="miniwave"><i style="height:50%"></i><i style="height:30%"></i><i style="height:70%"></i><i style="height:40%"></i><i style="height:60%"></i><i style="height:80%"></i><i style="height:35%"></i><i style="height:55%"></i><i style="height:75%"></i><i style="height:45%"></i><i style="height:65%"></i><i style="height:30%"></i><i style="height:50%"></i></div><div class="stamp">16:30 · embarcadero</div></div>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--paper-400); letter-spacing: 0.16em; text-transform: uppercase;">← → · flip · space · play</div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">10</span>detail · audio<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 09  DETAIL — moment                                          -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="11 Detail — Moment">
+    <div class="screen detail moment-detail">
+      <div class="detail-chrome">
+        <div class="detail-back">
+          <span class="esc">esc</span><span>back to atlas</span>
+        </div>
+        <div class="detail-pager">
+          <span>9 of 147 · alfama</span>
+          <div class="nav"><b>←</b><b>→</b></div>
+        </div>
+      </div>
+
+      <div class="moment-stage">
+        <div class="moment-map">
+          <div class="map-canvas">
+            <svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+              <g stroke="rgba(243,236,224,0.08)" stroke-width="1.5" fill="none">
+                <path d="M 200 200 Q 600 240 1100 220 T 1920 280"/>
+                <path d="M 200 380 Q 600 400 1100 380 T 1920 440"/>
+                <path d="M 200 560 Q 600 580 1100 560 T 1920 620"/>
+                <path d="M 200 740 Q 600 760 1100 740 T 1920 800"/>
+                <path d="M 400 0 Q 380 540 460 1080"/>
+                <path d="M 800 0 Q 780 540 860 1080"/>
+                <path d="M 1200 0 Q 1180 540 1260 1080"/>
+                <path d="M 1600 0 Q 1580 540 1660 1080"/>
+              </g>
+              <g stroke="rgba(243,236,224,0.04)" stroke-width="0.6" fill="none">
+                <path d="M 0 280 Q 600 300 1200 290 T 1920 320"/>
+                <path d="M 0 460 Q 600 480 1200 470 T 1920 500"/>
+                <path d="M 0 640 Q 600 660 1200 650 T 1920 680"/>
+                <path d="M 600 0 Q 580 540 660 1080"/>
+                <path d="M 1000 0 Q 980 540 1060 1080"/>
+                <path d="M 1400 0 Q 1380 540 1460 1080"/>
+              </g>
+              <!-- water -->
+              <path d="M 0 0 L 1920 0 L 1920 140 Q 1600 180 1200 160 Q 800 140 400 170 Q 200 180 0 160 Z" fill="rgba(20,30,50,0.4)"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="moment-pin"><div class="ring"></div></div>
+
+        <div class="center">
+          <div class="place">Alfama
+            <small>lisbon · portugal</small>
+          </div>
+        </div>
+
+        <div class="moment-music">
+          <div class="cover"></div>
+          <div class="text">
+            <div class="label">// playing</div>
+            <div class="track">Avril 14th</div>
+            <div class="artist">Aphex Twin · Drukqs</div>
+          </div>
+        </div>
+
+        <div class="moment-weather">
+          <div class="label">// weather</div>
+          <div class="v">22°C</div>
+          <div class="sub">clear · light wind from the Tejo</div>
+        </div>
+      </div>
+
+      <div class="meta-tl meta" style="top: 90px;">
+        <span class="label">// captured</span>
+        <div class="v big">Fri · April 5, 2024</div>
+        <div class="v" style="font-family: var(--font-mono); margin-top: 6px;">19:42 WEST · golden hour</div>
+      </div>
+
+      <div class="meta-tr meta" style="top: 90px;">
+        <span class="label">// coordinates</span>
+        <div class="v" style="font-family: var(--font-mono); font-size: 16px;">38.7128° N</div>
+        <div class="v" style="font-family: var(--font-mono); font-size: 16px;">9.1276° W</div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">11</span>detail · moment<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 10  DETAIL — note                                            -->
+  <!-- ============================================================ -->
+  <section class="slide" data-screen-label="12 Detail — Note">
+    <div class="screen detail note-detail">
+      <div class="detail-chrome">
+        <div class="detail-back">
+          <span class="esc">esc</span><span>back to atlas</span>
+        </div>
+        <div class="detail-pager">
+          <span>47 of 147 · home</span>
+          <div class="nav"><b>←</b><b>→</b></div>
+        </div>
+      </div>
+
+      <div class="note-stage">
+        <div class="stamp">// note · sunday may 17 · 22:11</div>
+        <div class="body">
+          The argument was <em>about the salt,</em> but it wasn't about the salt. It never is. Tomorrow I'll buy some lemons and we'll pretend.
+        </div>
+        <div class="footer">
+          <div>
+            <div class="place">Home</div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--paper-500); letter-spacing: 0.08em; margin-top: 6px;">37.762° N · 122.430° W · 15°C, foggy</div>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: end;">
+            <span class="tag-chip">house</span>
+            <span class="tag-chip">night</span>
+            <span class="tag-chip add">tag</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">12</span>detail · note<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 11  MOTION & IDLE                                            -->
+  <!-- ============================================================ -->
+  <section class="slide motion" data-screen-label="13 Motion & Idle">
+    <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="title">motion · idle</div></div>
+
+    <div class="header">
+      <h2>How it <em>breathes.</em></h2>
+      <p class="lede">Memoir is mostly still. The motion that exists has a purpose: orient on arrival, get out of the way after, and announce the new with one quiet pulse.</p>
+    </div>
+
+    <div class="motion-grid">
+      <div class="motion-cell">
+        <div class="k"><b>On open</b>opening shot</div>
+        <div class="v"><b>The globe rotates 4° over 1.2s,</b> then rests. Stars hold a slow parallax (8s loop). The today bar fades in last.</div>
+        <div class="demo"><span>1200ms</span><div class="anim-bar"></div><span>cubic-bezier(.2,.7,.2,1)</span></div>
+      </div>
+      <div class="motion-cell">
+        <div class="k"><b>Zoom transition</b>sky → map</div>
+        <div class="v"><b>A single continuous transform.</b> Three.js cross-dissolves into Mapbox at zoom 6, dots in-place. <em>Both directions.</em></div>
+        <div class="demo"><span>900ms</span><div class="anim-bar"></div><span>scroll · ⌘↑</span></div>
+      </div>
+      <div class="motion-cell">
+        <div class="k"><b>Detail entry</b>full-screen flip</div>
+        <div class="v"><b>Selected entry expands</b> from its map dot, surrounding chrome dims to 0.2. Neighbors fly in from below 150ms later.</div>
+        <div class="demo"><span>600ms + 150ms</span><div class="anim-bar"></div><span>spring · stiff</span></div>
+      </div>
+      <div class="motion-cell">
+        <div class="k"><b>Detail flip</b>← →</div>
+        <div class="v"><b>Crossfade with 60px lateral drift.</b> The next entry's metadata replaces piece by piece; media is a hard cut to avoid motion sickness.</div>
+        <div class="demo"><span>400ms</span><div class="anim-bar"></div><span>opacity + transform</span></div>
+      </div>
+
+      <div class="motion-cell">
+        <div class="k"><b>Idle</b>after 4s</div>
+        <div class="v"><b>Chrome fades to 0.15.</b> Only the map &amp; entries remain. Any mouse movement restores it in 250ms.</div>
+        <div class="demo"><span>4s · 800ms</span><div class="anim-bar"></div><span>opacity only</span></div>
+      </div>
+      <div class="motion-cell">
+        <div class="k"><b>Live arrival</b>new from mobile</div>
+        <div class="v"><b>One ember pulse</b> from the dot's location, 2.6s. Sidebar tile slides in from top. No sound, no toast.</div>
+        <div class="demo"><span>2600ms pulse</span><div class="anim-bar"></div><span>once · then settle</span></div>
+      </div>
+      <div class="motion-cell">
+        <div class="k"><b>Brush timeline</b>filter feedback</div>
+        <div class="v"><b>Map dots outside the brush dim to 0.15</b> over 250ms. Sidebar tiles fade their out-of-range siblings.</div>
+        <div class="demo"><span>250ms</span><div class="anim-bar"></div><span>linear · cheap</span></div>
+      </div>
+      <div class="motion-cell">
+        <div class="k"><b>Audio playback</b>waveform</div>
+        <div class="v"><b>The played portion brightens 40%</b> as the transcript scrolls in time. Pause and the playhead drifts ~6px on hover.</div>
+        <div class="demo"><span>real-time</span><div class="anim-bar"></div><span>requestAnimationFrame</span></div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">13</span>motion · idle<span class="of">/13</span></div>
+    <div class="deck-mark">memoir</div>
+  </section>
+
+</deck-stage>
+
+<!-- waveform generator -->
+<script>
+  (function() {
+    const wf = document.getElementById('wf');
+    if (!wf) return;
+    const playedTo = 0.38; // 38% played
+    // create 80 bars with pseudo-random heights
+    const seed = (i) => {
+      const v = Math.abs(Math.sin(i * 0.7 + 1.2) * Math.cos(i * 0.31) * 0.5 + Math.sin(i * 1.9) * 0.35);
+      return Math.max(0.18, Math.min(1, v + Math.sin(i * 0.13) * 0.3 + 0.3));
+    };
+    const total = 80;
+    for (let i = 0; i < total; i++) {
+      const h = seed(i);
+      const bar = document.createElement('i');
+      bar.style.height = (h * 100) + '%';
+      if (i / total < playedTo) bar.classList.add('played');
+      else if (i / total < playedTo + 0.02) bar.classList.add('up');
+      wf.appendChild(bar);
+    }
+    // playhead
+    const ph = document.createElement('div');
+    ph.className = 'playhead';
+    ph.style.left = (playedTo * 100) + '%';
+    wf.appendChild(ph);
+  })();
+</script>
+
+<script src="deck-stage.js"></script>
+<script src="image-slot.js"></script>
+</body>
+</html>

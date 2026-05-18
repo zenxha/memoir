@@ -8,3 +8,5 @@ packages/server/data/*.db*
 server.log
 .DS_Store
 docs/roadmap.md
+docs/implementation-plan.md
+docs/design/.image-slots.state.json
