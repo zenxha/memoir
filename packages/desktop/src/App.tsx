@@ -8,6 +8,7 @@ import { ChromeFader } from './components/ChromeFader';
 import { RollSurface } from './components/RollSurface';
 import { SurfaceSwitcher, Surface } from './components/SurfaceSwitcher';
 import { CommandPalette, spotlight } from './components/CommandPalette';
+import { NowPlaying } from './components/NowPlaying';
 import { MapCanvas } from './globe/MapCanvas';
 
 export function App() {
@@ -17,7 +18,8 @@ export function App() {
   const [wsOnline, setWsOnline] = useState(false);
   const [filter, setFilter]     = useState<string>('all');
   const [surface, setSurface]   = useState<Surface>('atlas');
-  const [newEntry, setNewEntry] = useState<Entry | null>(null);
+  const [newEntry, setNewEntry]     = useState<Entry | null>(null);
+  const [nowPlaying, setNowPlaying] = useState<{ title: string; artist: string } | null>(null);
 
   const loadEntries = useCallback(async (type = filter) => {
     const res = await api.entries.list({ query: { limit: 1000, ...(type !== 'all' ? { type } : {}) } });
@@ -33,7 +35,8 @@ export function App() {
 
   useEffect(() => {
     const handleWs = (msg: WsMessage) => {
-      if (msg.type === 'entry:new')     { setEntries(p => [msg.payload, ...p]); loadSessions(); setNewEntry(msg.payload); }
+      if (msg.type === 'entry:new')        { setEntries(p => [msg.payload, ...p]); loadSessions(); setNewEntry(msg.payload); }
+      if (msg.type === 'music:nowplaying') { setNowPlaying(msg.payload); }
       if (msg.type === 'entry:updated') setEntries(p => p.map(e => e.id === msg.payload.id ? msg.payload : e));
       if (msg.type === 'entry:deleted') setEntries(p => p.filter(e => e.id !== msg.payload.id));
     };
@@ -100,6 +103,8 @@ export function App() {
           }}>
             <SurfaceSwitcher current={surface} onChange={setSurface} />
           </div>
+
+          <NowPlaying track={nowPlaying} />
 
           {surface === 'atlas' && (
             <ChromeFader>

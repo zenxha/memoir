@@ -6,6 +6,7 @@ import { EntriesModule } from './entries/entries.module';
 import { MediaModule } from './media/media.module';
 import { EventsModule } from './events/events.module';
 import { LastfmService } from './services/lastfm.service';
+import { LocationModule } from './location/location.module';
 
 @Module({
   imports: [
@@ -17,8 +18,8 @@ import { LastfmService } from './services/lastfm.service';
     EntriesModule,
     MediaModule,
     EventsModule,
+    LocationModule,
   ],
-  providers: [LastfmService],
-  // LastfmService uses EntriesService which is exported by EntriesModule above
+  providers: [LastfmService], // EventsGateway via EventsModule, LocationStore via LocationModule
 })
 export class AppModule {}

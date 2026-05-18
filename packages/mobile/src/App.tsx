@@ -4,6 +4,7 @@ import { Entry } from '@memoir/contract';
 import { api } from './api/client';
 import { useGPS } from './hooks/useGPS';
 import { useBackend } from './hooks/useBackend';
+import { useLocationHeartbeat } from './hooks/useLocationHeartbeat';
 import { StatusBar } from './components/StatusBar';
 import { CaptureBar } from './components/CaptureBar';
 import { AudioRecorder } from './components/AudioRecorder';
@@ -12,6 +13,7 @@ import { RecentList } from './components/RecentList';
 export function App() {
   const position = useGPS();
   const online   = useBackend();
+  useLocationHeartbeat(position, online);
   const [entries, setEntries]   = useState<Entry[]>([]);
   const [recMode, setRecMode]   = useState(false);
 

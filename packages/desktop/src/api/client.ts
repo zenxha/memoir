@@ -7,9 +7,10 @@ export const api = initClient(contract, {
 });
 
 export type WsMessage =
-  | { type: 'entry:new';     payload: import('@memoir/contract').Entry }
-  | { type: 'entry:updated'; payload: import('@memoir/contract').Entry }
-  | { type: 'entry:deleted'; payload: { id: string } }
+  | { type: 'entry:new';       payload: import('@memoir/contract').Entry }
+  | { type: 'entry:updated';   payload: import('@memoir/contract').Entry }
+  | { type: 'entry:deleted';   payload: { id: string } }
+  | { type: 'music:nowplaying'; payload: { title: string; artist: string } | null }
   | { type: 'connected' };
 
 export function createWsClient(onMessage: (msg: WsMessage) => void) {

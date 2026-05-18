@@ -134,6 +134,19 @@ export const contract = c.router({
       responses: { 204: c.noBody() },
     },
   }),
+  location: c.router({
+    heartbeat: {
+      method: 'POST',
+      path: '/api/location/heartbeat',
+      body: z.object({
+        lat:       z.number(),
+        lng:       z.number(),
+        accuracy:  z.number().optional(),
+        device_id: z.string().optional(),
+      }),
+      responses: { 204: c.noBody() },
+    },
+  }),
   sessions: c.router({
     list: {
       method: 'GET',
