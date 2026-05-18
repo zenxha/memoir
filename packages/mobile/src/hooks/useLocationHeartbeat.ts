@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Position } from './useGPS';
 
-const INTERVAL_MS = 60_000; // 60s
+const INTERVAL_MS = 60_000; // 60s while open
 
 export function useLocationHeartbeat(position: Position | null, online: boolean) {
   useEffect(() => {
@@ -17,11 +17,19 @@ export function useLocationHeartbeat(position: Position | null, online: boolean)
           accuracy:  position.accuracy,
           device_id: 'mobile-pwa',
         }),
-      }).catch(() => { /* silent — non-critical */ });
+      }).catch(() => {});
     };
 
-    post(); // immediate on mount / when position changes
+    post(); // fire immediately when app opens or position first arrives
     const id = setInterval(post, INTERVAL_MS);
-    return () => clearInterval(id);
+
+    // Also fire on visibility restore — covers switching back to the app
+    const onVisible = () => { if (!document.hidden) post(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [online, position?.lat, position?.lng]);
 }
