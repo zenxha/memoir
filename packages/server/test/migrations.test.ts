@@ -74,7 +74,7 @@ describe('db/migrations', () => {
       'title', 'body', 'duration_ms', 'media_path', 'media_thumb',
       'waveform', 'transcript', 'music_title', 'music_artist',
       'music_key', 'tags', 'weather', 'device_id',
-      'external_id', 'embedding',
+      'external_id', 'embedding', 'transcript_model',
     ]) {
       expect(colNames).toContain(required);
     }

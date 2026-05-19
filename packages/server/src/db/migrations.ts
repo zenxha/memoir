@@ -59,4 +59,9 @@ export const migrations: Migration[] = [
         ON entries(id) WHERE embedding IS NOT NULL;
     `,
   },
+  {
+    version: 4,
+    name: 'transcript_model',
+    sql: `ALTER TABLE entries ADD COLUMN transcript_model TEXT;`,
+  },
 ];

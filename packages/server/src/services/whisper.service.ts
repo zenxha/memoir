@@ -22,11 +22,15 @@ export class WhisperService implements OnApplicationBootstrap {
   }
 
   private backfill() {
-    const rows = this.db.prepare(
-      "SELECT id, media_path FROM entries WHERE type='audio' AND media_path IS NOT NULL AND transcript IS NULL"
-    ).all() as { id: string; media_path: string }[];
+    const modelName = path.basename(process.env.WHISPER_MODEL ?? '');
+    // Re-transcribe entries with no transcript OR transcribed by a different model
+    const rows = this.db.prepare(`
+      SELECT id, media_path FROM entries
+      WHERE type = 'audio' AND media_path IS NOT NULL
+        AND (transcript IS NULL OR transcript_model != ?)
+    `).all(modelName) as { id: string; media_path: string }[];
     if (!rows.length) return;
-    this.log.log(`Whisper backfill: ${rows.length} audio entries without transcripts`);
+    this.log.log(`Whisper backfill: ${rows.length} entries (model: ${modelName})`);
     for (const { id, media_path } of rows) {
       this.transcribeAsync(id, media_path);
     }
@@ -51,7 +55,9 @@ export class WhisperService implements OnApplicationBootstrap {
         if (!fs.existsSync(txtPath)) return;
         const transcript = fs.readFileSync(txtPath, 'utf8').trim();
         fs.unlink(txtPath, () => {});
-        this.db.prepare('UPDATE entries SET transcript = ? WHERE id = ?').run(transcript, entryId);
+        this.db.prepare(
+          'UPDATE entries SET transcript = ?, transcript_model = ? WHERE id = ?'
+        ).run(transcript, path.basename(model), entryId);
       });
     });
   }
