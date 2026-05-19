@@ -27,7 +27,7 @@ export class WhisperService implements OnApplicationBootstrap {
     const rows = this.db.prepare(`
       SELECT id, media_path FROM entries
       WHERE type = 'audio' AND media_path IS NOT NULL
-        AND (transcript IS NULL OR transcript_model != ?)
+        AND (transcript IS NULL OR transcript_model IS NULL OR transcript_model != ?)
     `).all(modelName) as { id: string; media_path: string }[];
     if (!rows.length) return;
     this.log.log(`Whisper backfill: ${rows.length} entries (model: ${modelName})`);
