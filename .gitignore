@@ -18,6 +18,9 @@ tests/screenshots/
 test-results/
 playwright-report/
 
+# GSD planning docs (working docs — churn every session, kept local)
+.planning/
+
 # compiled artifacts that must not land in src/
 packages/contract/src/*.js
 packages/contract/src/*.d.ts
