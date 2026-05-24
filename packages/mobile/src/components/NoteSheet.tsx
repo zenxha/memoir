@@ -40,7 +40,7 @@ export function NoteSheet({ position, placeName, nowPlaying, onSave, onCancel }:
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') save();
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { void save(); }
   }
 
   return (
@@ -83,34 +83,23 @@ export function NoteSheet({ position, placeName, nowPlaying, onSave, onCancel }:
       </div>
 
       {/* Context pills */}
-      <div style={{
-        display: 'flex', flexWrap: 'wrap', gap: 5,
-        padding: '0 22px 16px',
-      }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '0 22px 16px' }}>
         {placeName && (
-          <span style={{
-            fontFamily: F.mono, fontSize: 10, color: C.paper700,
-            border: `1px solid ${C.ink300}`, borderRadius: 100,
-            padding: '4px 10px', background: 'rgba(28,25,36,0.4)',
-          }}>📍 {placeName}</span>
+          <span style={{ fontFamily: F.mono, fontSize: 10, color: C.paper700, border: `1px solid ${C.ink300}`, borderRadius: 100, padding: '4px 10px', background: 'rgba(28,25,36,0.4)' }}>
+            📍 {placeName}
+          </span>
         )}
         {nowPlaying && (
-          <span style={{
-            fontFamily: F.mono, fontSize: 10, color: C.paper700,
-            border: `1px solid ${C.ink300}`, borderRadius: 100,
-            padding: '4px 10px', background: 'rgba(28,25,36,0.4)',
-          }}>♪ {nowPlaying.title}</span>
+          <span style={{ fontFamily: F.mono, fontSize: 10, color: C.paper700, border: `1px solid ${C.ink300}`, borderRadius: 100, padding: '4px 10px', background: 'rgba(28,25,36,0.4)' }}>
+            ♪ {nowPlaying.title}
+          </span>
         )}
-        <span style={{
-          fontFamily: F.mono, fontSize: 10, color: C.paper400,
-          border: `1px solid ${C.ink300}`, borderRadius: 100,
-          padding: '4px 10px', background: 'rgba(28,25,36,0.4)',
-        }}>
+        <span style={{ fontFamily: F.mono, fontSize: 10, color: C.paper400, border: `1px solid ${C.ink300}`, borderRadius: 100, padding: '4px 10px', background: 'rgba(28,25,36,0.4)' }}>
           {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
         </span>
       </div>
 
-      {/* One-line fragment input */}
+      {/* Fragment input */}
       <div style={{ padding: '0 22px 16px', flex: 1 }}>
         <textarea
           ref={inputRef}
@@ -121,66 +110,30 @@ export function NoteSheet({ position, placeName, nowPlaying, onSave, onCancel }:
           placeholder='"the light was strange today'
           rows={3}
           style={{
-            width: '100%',
-            border: `1px solid ${C.note}`,
+            width: '100%', border: `1px solid ${C.note}`,
             background: `oklch(74% 0.10 15 / 0.06)`,
-            borderRadius: 12,
-            padding: '16px 18px',
-            fontFamily: F.display,
-            fontStyle: 'italic',
-            fontSize: 22,
-            color: C.paper900,
-            lineHeight: 1.3,
-            letterSpacing: '-0.005em',
-            resize: 'none',
-            outline: 'none',
-            boxSizing: 'border-box',
+            borderRadius: 12, padding: '16px 18px',
+            fontFamily: F.display, fontStyle: 'italic', fontSize: 22,
+            color: C.paper900, lineHeight: 1.3, letterSpacing: '-0.005em',
+            resize: 'none', outline: 'none', boxSizing: 'border-box',
           }}
         />
       </div>
 
       {/* Save bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 22px 40px', gap: 12,
-      }}>
-        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.paper500, letterSpacing: '0.06em' }}>
-          ↩ save · ⌘ enter
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px 40px', gap: 12 }}>
+        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.paper500, letterSpacing: '0.06em' }}>↩ save · ⌘ enter</div>
         <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onCancel} style={{ border: 0, background: 'transparent', fontFamily: F.mono, fontSize: 10, color: C.paper500, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer' }}>cancel</button>
           <button
-            onClick={onCancel}
-            style={{
-              border: 0, background: 'transparent',
-              fontFamily: F.mono, fontSize: 10, color: C.paper500,
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-              cursor: 'pointer',
-            }}
-          >cancel</button>
-          <button
-            onClick={save}
+            onClick={() => { void save(); }}
             disabled={!text.trim()}
-            style={{
-              border: 0,
-              background: text.trim() ? C.note : C.ink300,
-              color: text.trim() ? C.ink000 : C.paper500,
-              padding: '9px 18px',
-              borderRadius: 100,
-              fontFamily: F.mono, fontSize: 10,
-              letterSpacing: '0.16em', textTransform: 'uppercase',
-              cursor: text.trim() ? 'pointer' : 'default',
-              transition: 'background 200ms',
-            }}
+            style={{ border: 0, background: text.trim() ? C.note : C.ink300, color: text.trim() ? C.ink000 : C.paper500, padding: '9px 18px', borderRadius: 100, fontFamily: F.mono, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', cursor: text.trim() ? 'pointer' : 'default', transition: 'background 200ms' }}
           >save</button>
         </div>
       </div>
 
-      {/* Home indicator */}
-      <div style={{
-        position: 'absolute', bottom: 7, left: '50%', transform: 'translateX(-50%)',
-        width: 100, height: 4, background: 'rgba(243,236,224,0.35)', borderRadius: 4,
-        pointerEvents: 'none',
-      }} />
+      <div style={{ position: 'absolute', bottom: 7, left: '50%', transform: 'translateX(-50%)', width: 100, height: 4, background: 'rgba(243,236,224,0.35)', borderRadius: 4, pointerEvents: 'none' }} />
     </div>
   );
 }
