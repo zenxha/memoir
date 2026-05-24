@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Memoir Mobile — Design Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="mobile/styles.css" />
+<style>
+  /* ============================================================
+     This file's per-slide styles only.
+     ============================================================ */
+
+  /* COVER */
+  .cover {
+    background: radial-gradient(ellipse 90% 60% at 50% 40%, #14111a 0%, #0a0810 50%, #050307 100%);
+    display: grid;
+    place-items: center;
+  }
+  .cover .body { text-align: center; position: relative; z-index: 4; }
+  .cover h1 {
+    font-family: var(--font-display);
+    font-size: 220px;
+    font-weight: 400;
+    line-height: 0.92;
+    margin: 0;
+    color: var(--paper-900);
+    letter-spacing: -0.02em;
+  }
+  .cover h1 .em { font-style: italic; color: var(--paper-700); }
+  .cover h1 .sub {
+    display: block;
+    font-style: italic;
+    color: var(--paper-500);
+    font-size: 0.36em;
+    letter-spacing: 0.04em;
+    margin-top: 20px;
+  }
+  .cover .lede {
+    margin-top: 40px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 32px;
+    color: var(--paper-500);
+  }
+  .cover .meta-row {
+    margin-top: 90px;
+    display: flex; justify-content: center; gap: 88px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    color: var(--paper-400);
+    text-transform: uppercase;
+  }
+  .cover .meta-row span b { color: var(--paper-700); font-weight: 400; margin-right: 14px; }
+
+  /* SHIFT (slide 02) */
+  .shift {
+    padding: 140px 160px 100px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 60px;
+  }
+  .shift .header {
+    display: flex; justify-content: space-between; align-items: end;
+    gap: 80px;
+  }
+  .shift .header .lhs { display: grid; gap: 28px; max-width: 1100px; }
+  .shift .header .rhs {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--paper-500);
+    line-height: 1.55;
+    max-width: 460px;
+    text-align: right;
+  }
+  .shift-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--ink-300);
+    border-left: 1px solid var(--ink-300);
+  }
+  .shift-cell {
+    border-right: 1px solid var(--ink-300);
+    border-bottom: 1px solid var(--ink-300);
+    padding: 32px 30px 36px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 20px;
+  }
+  .shift-cell .num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .shift-cell .num b { color: var(--paper-900); font-weight: 400; margin-right: 12px; }
+  .shift-cell .v {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1.2;
+    color: var(--paper-900);
+    letter-spacing: -0.005em;
+  }
+  .shift-cell .v em { font-style: italic; color: var(--paper-500); }
+  .shift-cell .descr {
+    font-size: 13px;
+    color: var(--paper-500);
+    line-height: 1.55;
+  }
+
+  /* CANDIDATE-AT-A-GLANCE (slide 03) */
+  .glance {
+    padding: 60px 60px 90px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 36px;
+  }
+  .glance-header {
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: end;
+  }
+  .glance-header h2 { font-size: 64px !important; }
+  .glance-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .glance-card {
+    display: grid;
+    gap: 18px;
+    padding: 0 8px;
+    grid-template-rows: auto auto auto;
+  }
+  .glance-card .head {
+    display: grid; gap: 6px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--ink-300);
+  }
+  .glance-card .label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .glance-card .label b { color: var(--paper-900); font-weight: 400; margin-right: 10px; }
+  .glance-card .name {
+    font-family: var(--font-display);
+    font-size: 44px;
+    color: var(--paper-900);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-weight: 400;
+  }
+  .glance-card .name em { color: var(--paper-500); font-style: italic; }
+  .glance-card .gloss {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--paper-500);
+    line-height: 1.45;
+    max-width: 440px;
+  }
+  .glance-card .phone-wrap {
+    display: flex; justify-content: center;
+  }
+  .glance-card .phone {
+    --w: 280px;
+    --h: 560px;
+    border-radius: 32px;
+  }
+  .glance-card .phone .app { border-radius: 30px; }
+  .glance-card .pillars {
+    display: grid; gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-700);
+    letter-spacing: 0.04em;
+  }
+  .glance-card .pillars div {
+    display: grid; grid-template-columns: 90px 1fr;
+    align-items: baseline;
+    padding: 5px 0;
+    border-top: 1px solid var(--ink-300);
+  }
+  .glance-card .pillars div:first-child { border-top: 0; }
+  .glance-card .pillars b {
+    color: var(--paper-400);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 400;
+    font-size: 10px;
+  }
+
+  /* CANDIDATE SLIDE LAYOUT */
+  .candidate {
+    padding: 40px 0 80px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 20px;
+  }
+  .cand-grid {
+    padding: 0 50px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .cand-grid .col { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+  .cand-grid .phone {
+    --w: 260px;
+    --h: 530px;
+    border-radius: 30px;
+    margin: 0 auto;
+  }
+  .cand-grid .phone .app { border-radius: 28px; }
+  .cand-grid .phone-cap { width: 260px; margin: 18px auto 0; }
+
+  /* NOTE QUESTION slide */
+  .note-q {
+    padding: 100px 100px 80px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 60px;
+  }
+  .note-q .header {
+    display: flex; justify-content: space-between; align-items: end;
+    gap: 60px;
+  }
+  .note-q-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+  }
+  .note-q-card {
+    border: 1px solid var(--ink-300);
+    background: rgba(28,25,36,0.3);
+    padding: 32px 32px 36px;
+    display: grid;
+    grid-template-rows: auto auto auto auto;
+    gap: 22px;
+  }
+  .note-q-card .pill {
+    width: fit-content;
+    border: 1px solid var(--ink-300);
+    color: var(--paper-700);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-radius: 100px;
+  }
+  .note-q-card.a .pill { color: var(--audio); border-color: rgba(120,150,210,0.4); }
+  .note-q-card.b .pill { color: var(--moment); border-color: rgba(140,200,150,0.4); }
+  .note-q-card.c .pill { color: var(--note); border-color: rgba(220,150,160,0.4); }
+  .note-q-card .name {
+    font-family: var(--font-display);
+    font-size: 36px;
+    color: var(--paper-900);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .note-q-card .name em { color: var(--paper-500); font-style: italic; }
+  .note-q-card .descr {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--paper-500);
+  }
+  .note-q-card .descr b { color: var(--paper-900); font-weight: 400; }
+  .note-q-card .ux {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.06em;
+    border-top: 1px solid var(--ink-300);
+    padding-top: 16px;
+  }
+  .note-q-card .ux b { color: var(--paper-900); font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase; display: block; margin-bottom: 8px; }
+
+  /* CROSS-CUTTING */
+  .cross {
+    padding: 100px 100px 80px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 60px;
+  }
+  .cross .header { display: flex; justify-content: space-between; align-items: end; gap: 60px; }
+  .cross-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--ink-300);
+    border-left: 1px solid var(--ink-300);
+  }
+  .cross-cell {
+    border-right: 1px solid var(--ink-300);
+    border-bottom: 1px solid var(--ink-300);
+    padding: 40px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 24px;
+  }
+  .cross-cell .num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .cross-cell .num b { color: var(--paper-900); font-weight: 400; margin-right: 12px; }
+  .cross-cell .v {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1.25;
+    color: var(--paper-900);
+    letter-spacing: -0.005em;
+  }
+  .cross-cell .v em { font-style: italic; color: var(--paper-500); }
+  .cross-cell .descr {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--paper-500);
+  }
+  .cross-cell .descr b { color: var(--paper-900); font-weight: 400; }
+
+  /* COMPARISON */
+  .compare {
+    padding: 100px 100px 80px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 50px;
+  }
+  .compare .header { display: flex; justify-content: space-between; align-items: end; gap: 60px; }
+  .compare-table {
+    display: grid;
+    grid-template-columns: 320px repeat(3, 1fr);
+    border-top: 1px solid var(--ink-300);
+    border-left: 1px solid var(--ink-300);
+  }
+  .compare-table > div {
+    border-right: 1px solid var(--ink-300);
+    border-bottom: 1px solid var(--ink-300);
+    padding: 18px 24px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--paper-700);
+  }
+  .compare-table .col-head {
+    background: rgba(28,25,36,0.6);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 26px;
+    color: var(--paper-900);
+    letter-spacing: -0.005em;
+    padding: 24px 24px;
+  }
+  .compare-table .col-head .label {
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-size: 10px;
+    color: var(--paper-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .compare-table .row-head {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-400);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: rgba(28,25,36,0.3);
+  }
+  .compare-table .best {
+    background: rgba(216,160,90,0.06);
+    border-left: 2px solid var(--ember);
+    margin-left: -1px;
+    color: var(--paper-900);
+  }
+  .compare-table .blank { color: var(--paper-500); }
+  .compare-table .v-strong { color: var(--paper-900); }
+  .compare .recommend {
+    border: 1px solid var(--ember);
+    background: oklch(76% 0.16 35 / 0.06);
+    padding: 32px 40px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+  .compare .recommend .pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ember);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .compare .recommend .body {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 24px;
+    line-height: 1.4;
+    color: var(--paper-900);
+    letter-spacing: -0.005em;
+  }
+  .compare .recommend .body em { color: var(--ember); }
+
+</style>
+</head>
+<body>
+
+<deck-stage width="1920" height="1080" no-rail>
+
+  <!-- ============================================================
+       01 · COVER
+       ============================================================ -->
+  <section class="slide cover" data-screen-label="01 Cover">
+    <div class="stars"></div>
+    <div class="body">
+      <h1>Memo<span class="em">i</span>r<span class="sub">mobile</span></h1>
+      <div class="lede">— pocket capture, pocket archive</div>
+      <div class="meta-row">
+        <span><b>Brief</b>three wireframe candidates</span>
+        <span><b>Surface</b>390 × 844 · portrait</span>
+        <span><b>Date</b>may 2026</span>
+      </div>
+    </div>
+    <div class="slide-tag"><span class="num">01</span>cover<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+
+  <!-- ============================================================
+       02 · THE SHIFT — what changes from desktop
+       ============================================================ -->
+  <section class="slide shift" data-screen-label="02 The Shift">
+    <div class="header">
+      <div class="lhs">
+        <div class="section-eyebrow">// 02 · the shift</div>
+        <h2 class="section-title">Mobile is a <em>different</em> instrument.</h2>
+      </div>
+      <div class="rhs">
+        The desktop is for <em>sitting with</em> the archive.<br/>
+        The phone is for <em>catching</em> a moment before it gets away.<br/>
+        Four constraints reshape every decision.
+      </div>
+    </div>
+
+    <div class="shift-grid">
+      <div class="shift-cell">
+        <div class="num"><b>01</b>posture</div>
+        <div class="v">One thumb. <em>Often outdoors.</em></div>
+        <div class="descr">Primary actions live below the screen midpoint. No nav at the top edge. The capture surface assumes the user isn't looking at the screen carefully.</div>
+      </div>
+      <div class="shift-cell">
+        <div class="num"><b>02</b>time</div>
+        <div class="v">Open. Capture. <em>Close.</em></div>
+        <div class="descr">A capture should take under 10 seconds, including putting the phone back. Anything else fails the moment. Browse sessions are short too — checking what got logged today.</div>
+      </div>
+      <div class="shift-cell">
+        <div class="num"><b>03</b>three views, one screen</div>
+        <div class="v">Sky · Atlas · Roll <em>collapse.</em></div>
+        <div class="descr">The desktop's three browsing surfaces need to coexist in 390 pixels of width. Each candidate solves this differently — that's the real fork in the road.</div>
+      </div>
+      <div class="shift-cell">
+        <div class="num"><b>04</b>offline</div>
+        <div class="v">The signal <em>comes and goes.</em></div>
+        <div class="descr">Captures queue locally and flush silently when the network returns. The UI mentions it once if you ask — never as an error, never as a banner.</div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">02</span>the shift<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+  <!-- candidate-slide includes -->
+  <!-- ============================================================
+       03 · THREE CANDIDATES AT A GLANCE
+       ============================================================ -->
+  <section class="slide glance" data-screen-label="03 Three Candidates">
+    <div class="glance-header">
+      <div style="display: grid; gap: 22px;">
+        <div class="section-eyebrow">// 03 · three candidates</div>
+        <h2 class="section-title" style="font-size: 76px;">Three <em>anchors,</em> three apps.</h2>
+      </div>
+      <div style="max-width: 480px; font-size: 15px; line-height: 1.6; color: var(--paper-500); padding-bottom: 8px; text-align: right;">
+        Each candidate <b style="color: var(--paper-900); font-weight: 400;">anchors</b> the home screen on a different
+        thing — audio capture, the map, the chronological feed.
+        Browsing, capture, and the note problem follow from that choice.
+      </div>
+    </div>
+
+    <div class="glance-row">
+      <!-- A: RECORDER-FIRST -->
+      <div class="glance-card">
+        <div class="head">
+          <div class="label"><b>A</b>recorder-first</div>
+          <div class="name">The <em>recorder.</em></div>
+          <div class="gloss">A voice-memo app that happens to know where you were. Audio is the hero; everything else is a secondary type beside it.</div>
+        </div>
+        <div class="phone-wrap" id="phone-glance-a"></div>
+        <div class="pillars">
+          <div><b>anchor</b>big record button, always</div>
+          <div><b>nav</b>4-tab bottom bar</div>
+          <div><b>note</b>voice → Whisper → text</div>
+          <div><b>now playing</b>quiet pill, top of screen</div>
+        </div>
+      </div>
+
+      <!-- B: ATLAS-FIRST -->
+      <div class="glance-card">
+        <div class="head">
+          <div class="label"><b>B</b>atlas-first</div>
+          <div class="name">The <em>atlas.</em></div>
+          <div class="gloss">A live map of your day with a capture sheet that springs from any pin. Spatial first; the archive lives in a pull-up sheet.</div>
+        </div>
+        <div class="phone-wrap" id="phone-glance-b"></div>
+        <div class="pillars">
+          <div><b>anchor</b>map, edge-to-edge</div>
+          <div><b>nav</b>pull-up sheet · gestures</div>
+          <div><b>note</b>seeded card · one line</div>
+          <div><b>now playing</b>dynamic island</div>
+        </div>
+      </div>
+
+      <!-- C: SPINE -->
+      <div class="glance-card">
+        <div class="head">
+          <div class="label"><b>C</b>spine</div>
+          <div class="name">The <em>spine.</em></div>
+          <div class="gloss">A scrollable vertical chronology of what you've made — today first, last week below, last year way below. A diary that's already written itself.</div>
+        </div>
+        <div class="phone-wrap" id="phone-glance-c"></div>
+        <div class="pillars">
+          <div><b>anchor</b>chronological feed · today on top</div>
+          <div><b>nav</b>4-tab bottom bar + scrub</div>
+          <div><b>note</b>fragment chips + one line</div>
+          <div><b>now playing</b>ambient header glyph</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">03</span>three candidates<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+  <!-- ============================================================
+       04 · CANDIDATE A · RECORDER-FIRST
+       ============================================================ -->
+  <section class="slide candidate" data-screen-label="04 A · Recorder-first">
+    <div class="candidate-head">
+      <div class="id"><b>A</b></div>
+      <div class="summary">
+        <div class="section-eyebrow">// 04 · candidate A</div>
+        <div class="name">The <em>recorder.</em></div>
+        <div class="gloss">Audio is the most expressive type — and the one most often missed. So we put it directly under the thumb at all times. Other types live in a one-tap drawer. Browsing is a destination, reached through a tab.</div>
+      </div>
+      <div class="pillars">
+        <div><span class="k">anchor</span><br/><span class="v">record button</span></div>
+        <div><span class="k">nav</span><br/><span class="v">4-tab bottom bar</span></div>
+        <div><span class="k">notes</span><br/><span class="v">voice → Whisper</span></div>
+      </div>
+    </div>
+
+    <div class="cand-grid" id="cand-a-grid"></div>
+
+    <div class="slide-tag"><span class="num">04</span>candidate A · recorder-first<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+  <!-- ============================================================
+       05 · CANDIDATE B · ATLAS-FIRST
+       ============================================================ -->
+  <section class="slide candidate" data-screen-label="05 B · Atlas-first">
+    <div class="candidate-head">
+      <div class="id"><b>B</b></div>
+      <div class="summary">
+        <div class="section-eyebrow">// 05 · candidate B</div>
+        <div class="name">The <em>atlas.</em></div>
+        <div class="gloss">The map is always already there, with you on it. Capture is a sheet that rises from the bottom whenever you tap your pin. The archive is the same map at a different zoom or time. One surface, modal sheets — no tabs.</div>
+      </div>
+      <div class="pillars">
+        <div><span class="k">anchor</span><br/><span class="v">live map</span></div>
+        <div><span class="k">nav</span><br/><span class="v">gesture sheets</span></div>
+        <div><span class="k">notes</span><br/><span class="v">seeded one-line</span></div>
+      </div>
+    </div>
+
+    <div class="cand-grid" id="cand-b-grid"></div>
+
+    <div class="slide-tag"><span class="num">05</span>candidate B · atlas-first<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+  <!-- ============================================================
+       06 · CANDIDATE C · SPINE
+       ============================================================ -->
+  <section class="slide candidate" data-screen-label="06 C · Spine">
+    <div class="candidate-head">
+      <div class="id"><b>C</b></div>
+      <div class="summary">
+        <div class="section-eyebrow">// 06 · candidate C</div>
+        <div class="name">The <em>spine.</em></div>
+        <div class="gloss">The home screen is a vertical chronology — today at the top, yesterday below, last summer many scrolls down. Capture is a thin bar under the thumb that expands to fit the type. Spatial is a tab; visual is a tab; the feed is the home.</div>
+      </div>
+      <div class="pillars">
+        <div><span class="k">anchor</span><br/><span class="v">chronological feed</span></div>
+        <div><span class="k">nav</span><br/><span class="v">4-tab + scrub</span></div>
+        <div><span class="k">notes</span><br/><span class="v">fragment chips + line</span></div>
+      </div>
+    </div>
+
+    <div class="cand-grid" id="cand-c-grid"></div>
+
+    <div class="slide-tag"><span class="num">06</span>candidate C · spine<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+
+  <!-- ============================================================
+       07 · THE NOTE-TAKING QUESTION
+       ============================================================ -->
+  <section class="slide note-q" data-screen-label="07 The note problem">
+    <div class="header">
+      <div style="display: grid; gap: 22px;">
+        <div class="section-eyebrow">// 07 · the note problem</div>
+        <h2 class="section-title" style="font-size: 72px;">A blank text box <em>is the wrong answer.</em></h2>
+      </div>
+      <div style="max-width: 500px; font-size: 15px; line-height: 1.6; color: var(--paper-500); text-align: right;">
+        Notes are the only capture that asks the user to produce something. By the time a keyboard opens, the moment has passed. Each candidate proposes a different escape from the blank box.
+      </div>
+    </div>
+
+    <div class="note-q-grid">
+      <div class="note-q-card a">
+        <div class="pill">// candidate A</div>
+        <div class="name">Voice → <em>note.</em></div>
+        <div class="descr">
+          Hold the record button, talk for ten seconds, release. <b>Whisper transcribes; the transcript becomes the note body.</b> The user reviews the text later, from desktop, if they want. The pipeline already exists.
+        </div>
+        <div class="ux"><b>// the gesture</b>hold record · release · done</div>
+      </div>
+
+      <div class="note-q-card b">
+        <div class="pill">// candidate B</div>
+        <div class="name">Seeded <em>card.</em></div>
+        <div class="descr">
+          The note sheet opens with <b>location, weather, and now-playing already filled in.</b> A single one-line input takes a fragment — "the light was strange." Tap to commit. The user adds zero context because the app already knew it.
+        </div>
+        <div class="ux"><b>// the gesture</b>pull up · type · swipe down</div>
+      </div>
+
+      <div class="note-q-card c">
+        <div class="pill">// candidate C</div>
+        <div class="name">Fragment <em>chips.</em></div>
+        <div class="descr">
+          A grid of pre-canonical short prompts — <b>"a smell" · "the light" · "what someone said" · "a feeling"</b> — populates the sheet. Tap one to seed the input; the cursor is already inside, one line waiting. Or skip the chips and type a fragment cold.
+        </div>
+        <div class="ux"><b>// the gesture</b>tap chip · type · swipe down</div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">07</span>note problem<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+
+  <!-- ============================================================
+       08 · CROSS-CUTTING
+       ============================================================ -->
+  <section class="slide cross" data-screen-label="08 Cross-cutting">
+    <div class="header">
+      <div style="display: grid; gap: 22px;">
+        <div class="section-eyebrow">// 08 · cross-cutting</div>
+        <h2 class="section-title" style="font-size: 76px;">Same <em>across</em> all three.</h2>
+      </div>
+      <div style="max-width: 460px; font-size: 15px; line-height: 1.6; color: var(--paper-500); text-align: right;">
+        Six decisions that hold regardless of which structural candidate wins. Build these first.
+      </div>
+    </div>
+
+    <div class="cross-grid">
+      <div class="cross-cell">
+        <div class="num"><b>01</b>now playing</div>
+        <div class="v">A <em>quiet pill</em>, not a tile.</div>
+        <div class="descr">Whatever Last.fm reports lives in a single horizontal pill: <b>♪ · track · artist</b>. It floats near the top of the screen on candidates A and C, and inside the dynamic island on B. <b>It collapses to a single ember dot when nothing is playing.</b></div>
+      </div>
+      <div class="cross-cell">
+        <div class="num"><b>02</b>palette</div>
+        <div class="v">Dark mode, <em>always.</em></div>
+        <div class="descr">The Cosmographic Atlas palette translates 1:1 to mobile. Contrast bumps up by ~10% to handle outdoor reading. Embers stay calibrated. <b>Film grain stays on the surface</b> — at 55% it survives small screens better than expected.</div>
+      </div>
+      <div class="cross-cell">
+        <div class="num"><b>03</b>place names</div>
+        <div class="v">Reverse-geocoded, <em>always.</em></div>
+        <div class="descr">No raw lat/lng anywhere in the UI. "37.7596° N" becomes <b>"Mission · 20th &amp; Valencia"</b>. The mono coordinate line shows up only in the entry detail view, as marginalia — like the desktop.</div>
+      </div>
+      <div class="cross-cell">
+        <div class="num"><b>04</b>offline state</div>
+        <div class="v">Queue <em>silently.</em></div>
+        <div class="descr">No banner, no warning, no orange dot. Captures save locally and sync when the signal returns. A small mono indicator <b>"3 queued"</b> appears only inside the capture surface — never on the home screen.</div>
+      </div>
+      <div class="cross-cell">
+        <div class="num"><b>05</b>search</div>
+        <div class="v">A <em>sheet</em>, not a screen.</div>
+        <div class="descr">Tap the search affordance — sheet rises from the bottom. Recent queries, places, tags, dates surface first. Same syntax as the desktop's ⌘K: <b>type:audio in:Lisbon during:autumn</b>. Native iOS keyboard.</div>
+      </div>
+      <div class="cross-cell">
+        <div class="num"><b>06</b>live updates</div>
+        <div class="v">No <em>toast.</em> Ever.</div>
+        <div class="descr">A new entry captured from this device, or arriving from the websocket, doesn't toast. It appears in the appropriate surface with a single ember pulse and then settles. <b>The user sees the change only if they happen to be looking.</b></div>
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">08</span>cross-cutting<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+
+  <!-- ============================================================
+       09 · COMPARISON + RECOMMENDATION
+       ============================================================ -->
+  <section class="slide compare" data-screen-label="09 Comparison">
+    <div class="header">
+      <div style="display: grid; gap: 22px;">
+        <div class="section-eyebrow">// 09 · comparison</div>
+        <h2 class="section-title" style="font-size: 76px;">Where each one <em>wins.</em></h2>
+      </div>
+      <div style="max-width: 460px; font-size: 15px; line-height: 1.6; color: var(--paper-500); text-align: right;">
+        Honest trade table. Highlight is where I'd send a coin-flip — not the only acceptable choice.
+      </div>
+    </div>
+
+    <div class="compare-table">
+      <div></div>
+      <div class="col-head"><span class="label">A</span>The recorder.</div>
+      <div class="col-head"><span class="label">B</span>The atlas.</div>
+      <div class="col-head"><span class="label">C</span>The spine.</div>
+
+      <div class="row-head">capture speed (audio)</div>
+      <div class="best v-strong">under 2 seconds · one thumb</div>
+      <div>3–4 seconds · tap pin then sheet</div>
+      <div>2–3 seconds · expand capture bar</div>
+
+      <div class="row-head">capture speed (note)</div>
+      <div>2 seconds · hold &amp; talk</div>
+      <div class="best v-strong">2 seconds · pre-filled card · one tap</div>
+      <div>4 seconds · chip then type</div>
+
+      <div class="row-head">browsing the archive</div>
+      <div>destination tab · feed view</div>
+      <div>spatial-only by default · feed in sheet</div>
+      <div class="best v-strong">always already there · scroll back</div>
+
+      <div class="row-head">finding a place you've been</div>
+      <div>tab over to map</div>
+      <div class="best v-strong">already on it</div>
+      <div>tab over</div>
+
+      <div class="row-head">reflection / daily ritual</div>
+      <div>secondary · in archive tab</div>
+      <div>secondary · sheet</div>
+      <div class="best v-strong">the entire home screen</div>
+
+      <div class="row-head">offline reliability</div>
+      <div class="best v-strong">capture works · no map needed</div>
+      <div>map cache risk · capture still works</div>
+      <div class="best v-strong">feed works · cached</div>
+
+      <div class="row-head">one-handed reachability</div>
+      <div class="best v-strong">excellent · bottom record button</div>
+      <div>good · sheets rise to thumb</div>
+      <div>good · capture bar bottom</div>
+
+      <div class="row-head">scales to thousands of entries</div>
+      <div>archive feed virtualised</div>
+      <div class="best v-strong">map handles density natively</div>
+      <div class="best v-strong">virtual scroll · year scrub</div>
+
+      <div class="row-head">aesthetic distinctiveness</div>
+      <div>familiar (Recorder lineage)</div>
+      <div class="best v-strong">unmistakably Memoir</div>
+      <div>quiet, editorial</div>
+    </div>
+
+    <div class="recommend">
+      <div class="pill">// recommended</div>
+      <div class="body">
+        <b style="font-style: normal; font-family: var(--font-ui); font-size: 14px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ember); display: block; margin-bottom: 12px;">B · The atlas, with a recorder shortcut.</b>
+        It tells the truest story about what this app is — <em>you, in a place, listening to something, briefly.</em> The dynamic-island now-playing and the seeded note solve the two trickiest interactions cleanly. A persistent record shortcut from candidate A on the map's bottom-right (long-press anywhere = audio) closes the speed gap. Build B first.
+      </div>
+    </div>
+
+    <div class="slide-tag"><span class="num">09</span>comparison<span class="of">/09</span></div>
+    <div class="deck-mark">memoir · mobile</div>
+  </section>
+
+</deck-stage>
+
+<!-- inject phone mocks (kept in separate files for editability) -->
+<script src="mobile/phones-glance.js"></script>
+<script src="mobile/phones-a.js"></script>
+<script src="mobile/phones-b.js"></script>
+<script src="mobile/phones-c.js"></script>
+
+<script src="mobile/deck-stage.js"></script>
+</body>
+</html>
