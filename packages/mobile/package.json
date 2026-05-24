@@ -13,11 +13,13 @@
     "@mantine/hooks": "^7.11.0",
     "@memoir/contract": "workspace:*",
     "@ts-rest/core": "^3.51.0",
+    "mapbox-gl": "^3.23.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@types/mapbox-gl": "^3.5.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
