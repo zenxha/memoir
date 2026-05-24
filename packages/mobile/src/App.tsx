@@ -1,40 +1,171 @@
-import React, { useState, useEffect } from 'react';
-import { Stack, Box } from '@mantine/core';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Entry } from '@memoir/contract';
-import { api } from './api/client';
+import { api, createWsClient } from './api/client';
 import { useGPS } from './hooks/useGPS';
 import { useBackend } from './hooks/useBackend';
 import { useLocationHeartbeat } from './hooks/useLocationHeartbeat';
-import { StatusBar } from './components/StatusBar';
-import { CaptureBar } from './components/CaptureBar';
-import { AudioRecorder } from './components/AudioRecorder';
-import { RecentList } from './components/RecentList';
+import { C } from './design';
+
+import { AtlasBackground }  from './components/AtlasBackground';
+import { DynamicIsland }    from './components/DynamicIsland';
+import { BrowseSheet, AppMode } from './components/BrowseSheet';
+import { RecordingSheet }   from './components/RecordingSheet';
+import { NoteSheet }        from './components/NoteSheet';
+import { SearchSheet }      from './components/SearchSheet';
+import { EntryDetail }      from './components/EntryDetail';
 
 export function App() {
   const position = useGPS();
   const online   = useBackend();
   useLocationHeartbeat(position, online);
-  const [entries, setEntries]   = useState<Entry[]>([]);
-  const [recMode, setRecMode]   = useState(false);
 
+  const [mode, setMode]               = useState<AppMode>('home');
+  const [entries, setEntries]         = useState<Entry[]>([]);
+  const [selectedEntry, setSelected]  = useState<Entry | null>(null);
+  const [nowPlaying, setNowPlaying]   = useState<{ title: string; artist: string } | null>(null);
+  const [recordElapsed, setElapsed]   = useState(0);
+  const [browseFilter, setFilter]     = useState('all');
+
+  // ── Load initial entries ─────────────────────────────────────────────────────
   useEffect(() => {
-    api.entries.list({ query: { limit: 10 } }).then(res => {
+    api.entries.list({ query: { limit: 300 } }).then(res => {
       if (res.status === 200) setEntries(res.body);
     });
   }, []);
 
-  const addEntry = (entry: Entry) => setEntries(prev => [entry, ...prev.slice(0, 9)]);
+  // ── Now Playing polling ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await api.music.nowPlaying({ query: {} });
+        if (res.status === 200) setNowPlaying(res.body);
+      } catch { /* offline, ignore */ }
+    };
+    poll();
+    const id = setInterval(poll, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── WebSocket live updates ───────────────────────────────────────────────────
+  useEffect(() => {
+    const ws = createWsClient(msg => {
+      if (msg.type === 'entry:new')    setEntries(p => [msg.payload, ...p]);
+      if (msg.type === 'entry:updated') setEntries(p => p.map(e => e.id === msg.payload.id ? msg.payload : e));
+      if (msg.type === 'entry:deleted') setEntries(p => p.filter(e => e.id !== msg.payload.id));
+      if (msg.type === 'music:nowplaying') setNowPlaying(msg.payload);
+    });
+    return () => ws.close();
+  }, []);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  const addEntry = useCallback((entry: Entry) => setEntries(prev => [entry, ...prev]), []);
+
+  // Place name: use the most recent entry (within last 2h) that has a place_name
+  const recentWithPlace = entries.find(e =>
+    e.place_name && (Date.now() - e.created_at) < 2 * 3_600_000,
+  );
+  const placeName = recentWithPlace?.place_name ?? null;
+
+  // Map opacity dims for capture/detail overlays
+  const mapOpacity =
+    mode === 'detail'    ? 0    :
+    mode === 'recording' ? 0.30 :
+    mode === 'note'      ? 0.25 :
+    mode === 'search'    ? 0.40 : 1;
+
+  // ── Navigate to detail ───────────────────────────────────────────────────────
+  const openEntry = useCallback((e: Entry) => {
+    setSelected(e);
+    setMode('detail');
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setMode('browse');
+    setSelected(null);
+  }, []);
 
   return (
-    <Box style={{ background: '#0a0a0a', minHeight: '100dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <Stack gap={0}>
-        <StatusBar online={online} position={position} />
-        {recMode
-          ? <AudioRecorder position={position} onSave={addEntry} onCancel={() => setRecMode(false)} />
-          : <CaptureBar position={position} onRecord={() => setRecMode(true)} onSave={addEntry} />
-        }
-        <RecentList entries={entries} />
-      </Stack>
-    </Box>
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: C.ink000,
+      overflow: 'hidden',
+      touchAction: 'pan-y',
+    }}>
+      {/* Layer 1 — Atlas map background */}
+      <AtlasBackground
+        entries={entries}
+        position={position}
+        opacity={mapOpacity}
+      />
+
+      {/* Layer 2 — Dynamic island */}
+      <DynamicIsland
+        nowPlaying={nowPlaying}
+        recording={mode === 'recording'}
+        elapsed={recordElapsed}
+      />
+
+      {/* Layer 3 — Browse sheet (always mounted, slides up/down) */}
+      <BrowseSheet
+        mode={mode}
+        entries={entries}
+        placeName={placeName}
+        nowPlaying={nowPlaying}
+        filter={browseFilter}
+        position={position}
+        online={online}
+        onFilterChange={setFilter}
+        onOpen={()    => setMode('browse')}
+        onClose={()   => setMode('home')}
+        onRecord={()  => setMode('recording')}
+        onNote={()    => setMode('note')}
+        onSearch={()  => setMode('search')}
+        onSelectEntry={openEntry}
+        onSave={addEntry}
+      />
+
+      {/* Layer 4 — Recording sheet */}
+      {mode === 'recording' && (
+        <RecordingSheet
+          position={position}
+          placeName={placeName}
+          onElapsed={setElapsed}
+          onSave={e  => { addEntry(e); setMode('home'); setElapsed(0); }}
+          onCancel={() => { setMode('home'); setElapsed(0); }}
+        />
+      )}
+
+      {/* Layer 5 — Note sheet */}
+      {mode === 'note' && (
+        <NoteSheet
+          position={position}
+          placeName={placeName}
+          nowPlaying={nowPlaying}
+          onSave={e  => { addEntry(e); setMode('home'); }}
+          onCancel={() => setMode('home')}
+        />
+      )}
+
+      {/* Layer 6 — Search sheet */}
+      {mode === 'search' && (
+        <SearchSheet
+          entries={entries}
+          onSelectEntry={openEntry}
+          onClose={() => setMode('browse')}
+        />
+      )}
+
+      {/* Layer 7 — Entry detail (full-screen) */}
+      {mode === 'detail' && selectedEntry && (
+        <EntryDetail
+          entry={selectedEntry}
+          entries={entries}
+          nowPlaying={nowPlaying}
+          onClose={closeDetail}
+          onSelectEntry={e => { setSelected(e); }}
+        />
+      )}
+    </div>
   );
 }

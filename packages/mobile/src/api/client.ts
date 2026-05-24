@@ -5,3 +5,18 @@ export const api = initClient(contract, {
   baseUrl: '',
   baseHeaders: {},
 });
+
+export type WsMessage =
+  | { type: 'entry:new';        payload: import('@memoir/contract').Entry }
+  | { type: 'entry:updated';    payload: import('@memoir/contract').Entry }
+  | { type: 'entry:deleted';    payload: { id: string } }
+  | { type: 'music:nowplaying'; payload: { title: string; artist: string } | null }
+  | { type: 'connected' };
+
+export function createWsClient(onMessage: (msg: WsMessage) => void): WebSocket {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onclose   = () => { setTimeout(() => createWsClient(onMessage), 3000); };
+  ws.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch { /* ignore */ } };
+  return ws;
+}
