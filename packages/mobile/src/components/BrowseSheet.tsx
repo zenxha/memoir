@@ -2,6 +2,9 @@ import React, { useRef, useCallback } from 'react';
 import { Entry } from '@memoir/contract';
 import { C, F, typeColor, typeGlow, timeAgo, groupByDay } from '../design';
 import { Position } from '../hooks/useGPS';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { api } from '../api/client';
+import { PhotoGrid } from './PhotoGrid';
 
 export type AppMode = 'home' | 'browse' | 'recording' | 'note' | 'detail' | 'search';
 
@@ -118,10 +121,56 @@ function DaySection({ dayLabel, dateStr, entries, onSelectEntry }: {
 export function BrowseSheet({
   mode, entries, placeName, nowPlaying, filter,
   position, online,
-  onFilterChange, onOpen, onClose, onRecord, onNote, onSearch, onSelectEntry,
+  onFilterChange, onOpen, onClose, onRecord, onNote, onSearch, onSelectEntry, onSave,
 }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
+
+  // Offline-queue auto-flushes on mount + on `window:online`; flushed entries emit via onSave.
+  // Mirrors the wiring in RecordingSheet (line 32) and NoteSheet (line 19).
+  const { enqueue } = useOfflineQueue(onSave);
+
+  // Two-step photo capture: api.entries.create → /api/media/upload → onSave.
+  // On any failure, fall back to the offline queue with an optimistic placeholder
+  // entry — same shape as RecordingSheet.stop() (lines 114-120) and NoteSheet.save()
+  // (lines 32-38). The contract client (api.entries.create) MUST be used here per
+  // T-03-05 — no raw fetch on /api/entries.
+  const handlePhotoFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = '';                       // Pitfall 7: allow re-selecting the same file
+    if (!file) return;
+
+    const pos = position
+      ? { lat: position.lat, lng: position.lng, accuracy: position.accuracy }
+      : {};
+    const body = { type: 'photo' as const, ...pos };
+    const blobName = file.name || `photo-${Date.now()}.jpg`;
+
+    try {
+      const res = await api.entries.create({ body });
+      if (res.status !== 201) throw new Error('create failed');
+      const entry = res.body;
+
+      const fd = new FormData();
+      fd.append('entryId', entry.id);
+      fd.append('file', file, blobName);
+      const up = await fetch('/api/media/upload', { method: 'POST', body: fd });
+      if (!up.ok) throw new Error('upload failed');
+
+      // The WS broadcast (entry:updated) will hydrate media_path / media_thumb shortly.
+      onSave(entry);
+    } catch {
+      enqueue({ body, blob: file, blobName });
+      onSave({
+        ...body, id: `offline-${Date.now()}`, created_at: Date.now(), imported_at: null, source: 'native',
+        lat: pos.lat ?? null, lng: pos.lng ?? null, accuracy: pos.accuracy ?? null, altitude: null,
+        place_name: 'Queued offline', title: null, body: null, duration_ms: null, waveform: null,
+        transcript: null, media_path: null, media_thumb: null,
+        music_title: null, music_artist: null, music_key: null,
+        tags: [], weather: null, device_id: null, external_id: null,
+      });
+    }
+  }, [position, onSave, enqueue]);
 
   const isHome   = mode === 'home';
   const isBrowse = mode === 'browse';
@@ -277,27 +326,33 @@ export function BrowseSheet({
             </div>
           </div>
 
-          {/* Scrollable entry list */}
+          {/* Scrollable entry list (filter='photo' swaps in PhotoGrid; D-16/D-17) */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
             padding: '0 20px 80px',
             WebkitOverflowScrolling: 'touch',
           }}>
-            {groups.length === 0 && (
-              <div style={{ fontFamily: F.display, fontStyle: 'italic', fontSize: 16, color: C.paper500, paddingTop: 32, textAlign: 'center' }}>
-                No entries yet
-              </div>
+            {filter === 'photo' ? (
+              <PhotoGrid entries={entries} onSelectEntry={onSelectEntry} />
+            ) : (
+              <>
+                {groups.length === 0 && (
+                  <div style={{ fontFamily: F.display, fontStyle: 'italic', fontSize: 16, color: C.paper500, paddingTop: 32, textAlign: 'center' }}>
+                    No entries yet
+                  </div>
+                )}
+                {groups.map(g => (
+                  <DaySection
+                    key={g.key}
+                    dayLabel={g.dayLabel}
+                    dateStr={g.dateStr}
+                    entries={g.entries}
+                    onSelectEntry={onSelectEntry}
+                  />
+                ))}
+              </>
             )}
-            {groups.map(g => (
-              <DaySection
-                key={g.key}
-                dayLabel={g.dayLabel}
-                dateStr={g.dateStr}
-                entries={g.entries}
-                onSelectEntry={onSelectEntry}
-              />
-            ))}
           </div>
 
           {/* Capture pill row at bottom */}
@@ -329,7 +384,13 @@ export function BrowseSheet({
               display: 'grid', placeItems: 'center',
             }}>
               + photo
-              <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handlePhotoFile}
+              />
             </label>
 
             {/* Record FAB (center) */}
