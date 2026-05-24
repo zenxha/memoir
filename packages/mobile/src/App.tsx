@@ -6,7 +6,7 @@ import { useBackend } from './hooks/useBackend';
 import { useLocationHeartbeat } from './hooks/useLocationHeartbeat';
 import { C } from './design';
 
-import { AtlasBackground }  from './components/AtlasBackground';
+import { MapSurface }       from './components/MapSurface';
 import { DynamicIsland }    from './components/DynamicIsland';
 import { BrowseSheet, AppMode } from './components/BrowseSheet';
 import { RecordingSheet }   from './components/RecordingSheet';
@@ -92,11 +92,12 @@ export function App() {
       overflow: 'hidden',
       touchAction: 'pan-y',
     }}>
-      {/* Layer 1 — Atlas map background */}
-      <AtlasBackground
+      {/* Layer 1 — Mapbox surface */}
+      <MapSurface
         entries={entries}
         position={position}
         opacity={mapOpacity}
+        onEntryClick={openEntry}
       />
 
       {/* Layer 2 — Dynamic island */}
