@@ -252,6 +252,7 @@ export function BrowseSheet({
           padding: '0 20px 24px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
+          {/* Left: today metadata */}
           <div>
             <div style={{ fontFamily: F.mono, fontSize: 9, color: C.paper400, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
               today · {new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()}
@@ -261,23 +262,63 @@ export function BrowseSheet({
             </div>
           </div>
 
-          {/* Record FAB */}
-          <div
-            onClick={onRecord}
-            style={{
-              width: 52, height: 52, borderRadius: '50%',
-              background: 'radial-gradient(circle at 35% 30%, oklch(80% 0.16 250), oklch(60% 0.16 250))',
-              boxShadow: `0 0 0 4px rgba(28,25,36,0.6), 0 0 0 5px ${C.audio}, 0 0 24px 4px ${C.audioGlow}`,
-              display: 'grid', placeItems: 'center',
+          {/* Right: + note pill, + photo pill, audio FAB */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* + note */}
+            <button
+              onClick={onNote}
+              style={{
+                height: 36,
+                padding: '0 12px',
+                border: `1px solid ${C.ink300}`,
+                background: 'rgba(28,25,36,0.6)',
+                color: C.note,
+                borderRadius: 100,
+                fontFamily: F.mono, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
+                cursor: 'pointer',
+              }}
+            >+ note</button>
+
+            {/* + photo */}
+            <label style={{
+              height: 36,
+              padding: '0 12px',
+              border: `1px solid ${C.ink300}`,
+              background: 'rgba(28,25,36,0.6)',
+              color: C.photo,
+              borderRadius: 100,
+              fontFamily: F.mono, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
               cursor: 'pointer',
-              flexShrink: 0,
-              position: 'relative',
-            }}
-          >
-            <div style={{
-              width: 18, height: 18, borderRadius: 4,
-              background: C.paper900,
-            }} />
+              display: 'grid', placeItems: 'center',
+            }}>
+              + photo
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handlePhotoFile}
+              />
+            </label>
+
+            {/* Record FAB */}
+            <div
+              onClick={onRecord}
+              style={{
+                width: 52, height: 52, borderRadius: '50%',
+                background: 'radial-gradient(circle at 35% 30%, oklch(80% 0.16 250), oklch(60% 0.16 250))',
+                boxShadow: `0 0 0 4px rgba(28,25,36,0.6), 0 0 0 5px ${C.audio}, 0 0 24px 4px ${C.audioGlow}`,
+                display: 'grid', placeItems: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+                position: 'relative',
+              }}
+            >
+              <div style={{
+                width: 18, height: 18, borderRadius: 4,
+                background: C.paper900,
+              }} />
+            </div>
           </div>
         </div>
       )}
