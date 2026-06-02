@@ -77,7 +77,11 @@ function EntryRow({ entry, onSelect }: { entry: Entry; onSelect: () => void }) {
         {entry.type === 'photo' && entry.media_thumb && (
           <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
             <img
-              src={`/api/media/${entry.media_thumb}`}
+              // Server stores `media_thumb` as `media/thumb_xxx.jpg`; the
+              // /api/media/:filename route resolves a bare filename, so strip the
+              // leading "media/" prefix to avoid double-prefixing (WR-02). Mirrors
+              // PhotoGrid.PhotoTile (PhotoGrid.tsx:144-146).
+              src={`/api/media/${entry.media_thumb.replace('media/', '')}`}
               alt=""
               style={{ width: 36, height: 36, objectFit: 'cover', border: `1px solid ${C.ink300}` }}
             />
@@ -135,10 +139,25 @@ export function BrowseSheet({
   // entry — same shape as RecordingSheet.stop() (lines 114-120) and NoteSheet.save()
   // (lines 32-38). The contract client (api.entries.create) MUST be used here per
   // T-03-05 — no raw fetch on /api/entries.
+  //
+  // If `entries.create` succeeds but the subsequent /api/media/upload fails, the
+  // server is left with an orphan placeless entry. Roll it back via
+  // `api.entries.remove(entry.id)` before enqueueing, so the offline-queue retry
+  // (which re-creates the entry) doesn't produce a duplicate (WR-01).
+  //
+  // Photo input has `accept="image/*"` + `capture="environment"`, but `accept` is
+  // advisory — a user manually picking a HEIC or video would either be silently
+  // rejected by `sharp` or stored as an opaque blob the desktop client can't render.
+  // A 50MB cap is generous for phone photos (well under the server's 500MB cap)
+  // and aborts before chewing mobile bandwidth on an accidental video (WR-06).
   const handlePhotoFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
     e.currentTarget.value = '';                       // Pitfall 7: allow re-selecting the same file
     if (!file) return;
+
+    // WR-06: client-side MIME + size gate.
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 50 * 1024 * 1024) return;
 
     const pos = position
       ? { lat: position.lat, lng: position.lng, accuracy: position.accuracy }
@@ -146,10 +165,12 @@ export function BrowseSheet({
     const body = { type: 'photo' as const, ...pos };
     const blobName = file.name || `photo-${Date.now()}.jpg`;
 
+    let createdEntryId: string | null = null;
     try {
       const res = await api.entries.create({ body });
       if (res.status !== 201) throw new Error('create failed');
       const entry = res.body;
+      createdEntryId = entry.id;
 
       const fd = new FormData();
       fd.append('entryId', entry.id);
@@ -160,6 +181,13 @@ export function BrowseSheet({
       // The WS broadcast (entry:updated) will hydrate media_path / media_thumb shortly.
       onSave(entry);
     } catch {
+      // Roll back the orphan entry if create succeeded but upload failed (WR-01).
+      // Fire-and-forget: if the rollback DELETE itself fails (offline), we accept
+      // the worst case (one orphan + one queued duplicate) — rare and recoverable.
+      if (createdEntryId) {
+        api.entries.remove({ params: { id: createdEntryId } })
+          .catch(() => { /* offline — orphan will be reconciled manually */ });
+      }
       enqueue({ body, blob: file, blobName });
       onSave({
         ...body, id: `offline-${Date.now()}`, created_at: Date.now(), imported_at: null, source: 'native',
