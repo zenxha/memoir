@@ -83,6 +83,14 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
   const fitOnceRef   = useRef(false);
   const onEntryClickRef = useRef(onEntryClick);
   const pulseRafRef  = useRef<number | null>(null);
+  const labelRafRef  = useRef<number | null>(null);
+  const pulseEntryRafRef = useRef<number | null>(null);
+
+  // Gates the user-pin pulse effect on the Mapbox `load` callback finishing —
+  // without this gate, the pulse effect runs once with deps=[] before the
+  // `user-pin-glow` layer is registered, every setPaintProperty throws, the
+  // try/catch swallows it, and the pin stays static (CR-01).
+  const [mapReady, setMapReady] = useState(false);
 
   // Track props through refs so map event handlers always see the latest values
   // without re-binding (pattern from MapCanvas.tsx:41-47).
@@ -112,6 +120,9 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
     } as any);
 
     mapRef.current = map;
+
+    // Captured by the `load` callback so cleanup can `map.off('move', onMoveHandler)` (CR-02).
+    let onMoveHandler: (() => void) | null = null;
 
     map.on('load', () => {
       // ── Atmosphere (verbatim from MapCanvas.tsx:67-74) ────────────────────
@@ -279,9 +290,10 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
       if (positionRef.current) fitOnceRef.current = true;
 
       // Update DOM-label position whenever the map moves (RAF-coalesced inside move handler).
-      let labelRaf = 0;
+      // `labelRafRef` is hoisted to a ref so the outer effect's cleanup can cancel any
+      // in-flight RAF before `map.remove()` fires (CR-02).
       const updateLabel = () => {
-        labelRaf = 0;
+        labelRafRef.current = null;
         const pos = positionRef.current;
         if (!pos) {
           setLabelXY(null);
@@ -290,33 +302,42 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
         const { x, y } = map.project([pos.lng, pos.lat]);
         setLabelXY({ x, y });
       };
-      const onMove = () => {
-        if (labelRaf) return;
-        labelRaf = requestAnimationFrame(updateLabel);
+      onMoveHandler = () => {
+        if (labelRafRef.current) return;
+        labelRafRef.current = requestAnimationFrame(updateLabel);
       };
-      map.on('move', onMove);
+      map.on('move', onMoveHandler);
       updateLabel();
+
+      // Signal that style + layers are ready so the pulse effect can start (CR-01).
+      setMapReady(true);
     });
 
-    // Cleanup — verbatim shape from MapCanvas.tsx:229-233
+    // Cleanup — verbatim shape from MapCanvas.tsx:229-233, extended to cancel the
+    // label RAF (CR-02) and remove the `move` listener before `map.remove()`.
     return () => {
       if (pulseRafRef.current) cancelAnimationFrame(pulseRafRef.current);
+      if (labelRafRef.current) cancelAnimationFrame(labelRafRef.current);
+      if (pulseEntryRafRef.current) cancelAnimationFrame(pulseEntryRafRef.current);
+      if (onMoveHandler) map.off('move', onMoveHandler);
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // Keep entry dots in sync (verbatim from MapCanvas.tsx:237-240)
+  // Keep entry dots in sync (verbatim from MapCanvas.tsx:237-240).
+  // Keyed on [entries, position] so the second-pass autoFit reads `position` as a
+  // proper dep instead of via `positionRef.current` — eliminates the ordering risk
+  // flagged by WR-05.
   useEffect(() => {
-    const src = mapRef.current?.getSource('entries') as mapboxgl.GeoJSONSource | undefined;
+    const map = mapRef.current;
+    const src = map?.getSource('entries') as mapboxgl.GeoJSONSource | undefined;
     src?.setData(toGeoJSON(entries));
-    // Second-pass autoFit: if the initial pass couldn't include a GPS pin yet,
-    // try again whenever entries or position next change.
-    if (!fitOnceRef.current && mapRef.current?.loaded()) {
-      autoFit(mapRef.current, entries, positionRef.current);
-      if (positionRef.current) fitOnceRef.current = true;
+    if (!fitOnceRef.current && map?.loaded()) {
+      autoFit(map, entries, position);
+      if (position) fitOnceRef.current = true;
     }
-  }, [entries]);
+  }, [entries, position]);
 
   // Keep user-pin source in sync with GPS
   useEffect(() => {
@@ -350,10 +371,12 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
     }
   }, [position]);
 
-  // Pulse the user-pin glow on a 2.4s triangle wave — replaces AtlasBackground.tsx:127-129
+  // Pulse the user-pin glow on a 2.4s triangle wave — replaces AtlasBackground.tsx:127-129.
+  // Gated on `mapReady` so the loop only starts after the `user-pin-glow` layer is
+  // registered inside the `load` callback (CR-01).
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
     const start = performance.now();
     const loop = (t: number) => {
       const phase = ((t - start) / 2400) % 1;                 // 0..1 across 2.4s
@@ -371,7 +394,7 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
       if (pulseRafRef.current) cancelAnimationFrame(pulseRafRef.current);
       pulseRafRef.current = null;
     };
-  }, []);
+  }, [mapReady]);
 
   // Live-arrival pulse (verbatim from MapCanvas.tsx:242-271). newEntry is optional
   // — short-circuits when null/undefined.
@@ -392,6 +415,7 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
     const start = performance.now();
     const DURATION = 2600;
     const animatePulse = (now: number) => {
+      pulseEntryRafRef.current = null;
       const t = Math.min((now - start) / DURATION, 1);
       const ease = 1 - Math.pow(1 - t, 3);
       try {
@@ -399,10 +423,22 @@ export function MapSurface({ entries, position, opacity, onEntryClick, newEntry 
         (map as any).setPaintProperty('pulse-ring', 'circle-opacity', (1 - t) * 0.6);
         (map as any).setPaintProperty('pulse-ring', 'circle-stroke-color', color);
       } catch (_) { /* style not loaded yet */ }
-      if (t < 1) requestAnimationFrame(animatePulse);
-      else src?.setData(emptyFC());
+      if (t < 1) {
+        pulseEntryRafRef.current = requestAnimationFrame(animatePulse);
+      } else {
+        // Guard: if the source has already been torn down by `map.remove()`,
+        // `getSource('pulse')` returns undefined and `src?.setData` is a no-op.
+        try { src?.setData(emptyFC()); } catch { /* map disposed */ }
+      }
     };
-    requestAnimationFrame(animatePulse);
+    pulseEntryRafRef.current = requestAnimationFrame(animatePulse);
+    // Cancel the in-flight chain if the effect re-runs (new newEntry arrives mid-pulse)
+    // or the component unmounts (WR-03). The outer unmount cleanup also cancels via
+    // pulseEntryRafRef.current — both paths converge on the same ref.
+    return () => {
+      if (pulseEntryRafRef.current) cancelAnimationFrame(pulseEntryRafRef.current);
+      pulseEntryRafRef.current = null;
+    };
   }, [newEntry]);
 
   return (
