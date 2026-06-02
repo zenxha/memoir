@@ -124,7 +124,13 @@ function DayRow({ bucket, entries, onSelectEntry }: {
             key={`s-${s.started_at}`}
             session={s}
             onClick={() => {
-              const first = entries.find(e => e.id === s.entry_ids[0]);
+              // `entries` is capped at 300 newest by App.tsx, so the session's
+              // chronologically-first entry may not be in scope — fall back to
+              // the first entry from the session that *is* in `entries` rather
+              // than silently no-op'ing (WR-04).
+              const first = s.entry_ids
+                .map(id => entries.find(e => e.id === id))
+                .find((e): e is Entry => !!e);
               if (first) onSelectEntry(first);
             }}
           />
