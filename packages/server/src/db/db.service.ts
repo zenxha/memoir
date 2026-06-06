@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import Database from 'better-sqlite3';
+import * as sqliteVec from 'sqlite-vec';
 import * as path from 'path';
 import * as fs from 'fs';
 import { migrations } from './migrations';
@@ -17,9 +18,12 @@ export class DbService extends Database implements OnModuleInit {
   }
 
   onModuleInit() {
+    sqliteVec.load(this);
     this.pragma('journal_mode = WAL');
     this.pragma('foreign_keys = ON');
     this.runMigrations();
+    const v = this.prepare('SELECT vec_version() AS v').get() as { v: string };
+    this.log.log(`sqlite-vec loaded (${v.v})`);
   }
 
   private runMigrations() {
