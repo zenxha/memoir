@@ -54,6 +54,13 @@ let dbPath: string;
 let backupDirOverride: string | undefined;
 const ORIGINAL_ENV = { ...process.env };
 
+function stubBootstrapTimers() {
+  // Prevent leaked intervals + leaked async runBackup() from racing against the test.
+  const intervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation((() => 0 as unknown as NodeJS.Timeout) as any);
+  const immediateSpy = vi.spyOn(globalThis, 'setImmediate').mockImplementation((() => 0 as unknown as NodeJS.Immediate) as any);
+  return () => { intervalSpy.mockRestore(); immediateSpy.mockRestore(); };
+}
+
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'memoir-backup-'));
   dbPath = path.join(tmpDir, 'memoir.db');
@@ -78,11 +85,12 @@ describe('BackupService — INFRA-07', () => {
   it('Test 1: runBackup writes a dated .db file readable as SQLite with the same entries', async () => {
     const db = seedDb(dbPath);
     const svc = new BackupService(db as unknown as DbService);
-    svc.onApplicationBootstrap();
 
-    // Bootstrap may schedule an opportunistic catch-up via setImmediate; flush it.
-    await new Promise(r => setImmediate(r));
-    // Also explicitly invoke runBackup so the test is deterministic regardless of catch-up logic.
+    const restoreTimers = stubBootstrapTimers();
+    svc.onApplicationBootstrap();
+    restoreTimers();
+
+    // Explicit, awaited single backup — deterministic.
     await (svc as any).runBackup();
     svc.onModuleDestroy();
 
@@ -104,8 +112,9 @@ describe('BackupService — INFRA-07', () => {
   it('Test 2: BACKUP_DIR defaults to ${MEMOIR_DATA_DIR}/backups when env is unset', async () => {
     const db = seedDb(dbPath);
     const svc = new BackupService(db as unknown as DbService);
+    const restoreTimers = stubBootstrapTimers();
     svc.onApplicationBootstrap();
-    await new Promise(r => setImmediate(r));
+    restoreTimers();
     svc.onModuleDestroy();
 
     const expected = path.join(tmpDir, 'backups');
@@ -119,8 +128,9 @@ describe('BackupService — INFRA-07', () => {
     process.env.BACKUP_DIR = backupDirOverride;
     const db = seedDb(dbPath);
     const svc = new BackupService(db as unknown as DbService);
+    const restoreTimers = stubBootstrapTimers();
     svc.onApplicationBootstrap();
-    await new Promise(r => setImmediate(r));
+    restoreTimers();
     svc.onModuleDestroy();
 
     expect((svc as any).backupDir).toBe(path.resolve(backupDirOverride));
@@ -131,8 +141,9 @@ describe('BackupService — INFRA-07', () => {
   it('Test 4: backup directory is created mode 0700 (Security V8)', async () => {
     const db = seedDb(dbPath);
     const svc = new BackupService(db as unknown as DbService);
+    const restoreTimers = stubBootstrapTimers();
     svc.onApplicationBootstrap();
-    await new Promise(r => setImmediate(r));
+    restoreTimers();
     svc.onModuleDestroy();
 
     const backupDir = path.join(tmpDir, 'backups');
@@ -147,9 +158,9 @@ describe('BackupService — INFRA-07', () => {
   it('Test 5: retention rotation keeps last 7 daily + last 4 Sunday weekly (D-23)', async () => {
     const db = seedDb(dbPath);
     const svc = new BackupService(db as unknown as DbService);
+    const restoreTimers = stubBootstrapTimers();
     svc.onApplicationBootstrap();
-    await new Promise(r => setImmediate(r));
-    // Wipe any opportunistic-catch-up file before seeding synthetic state
+    restoreTimers();
     const backupDir = path.join(tmpDir, 'backups');
     for (const f of fs.readdirSync(backupDir)) fs.unlinkSync(path.join(backupDir, f));
 
@@ -196,8 +207,9 @@ describe('BackupService — INFRA-07', () => {
   it('Test 6: shouldCatchUp respects 24h freshness window (D-22)', async () => {
     const db = seedDb(dbPath);
     const svc = new BackupService(db as unknown as DbService);
+    const restoreTimers = stubBootstrapTimers();
     svc.onApplicationBootstrap();
-    await new Promise(r => setImmediate(r));
+    restoreTimers();
     const backupDir = path.join(tmpDir, 'backups');
     for (const f of fs.readdirSync(backupDir)) fs.unlinkSync(path.join(backupDir, f));
 
@@ -229,9 +241,9 @@ describe('BackupService — INFRA-07', () => {
       tick = fn;
       return 0 as unknown as NodeJS.Timeout;
     }) as any);
+    const immediateSpy = vi.spyOn(globalThis, 'setImmediate').mockImplementation((() => 0 as unknown as NodeJS.Immediate) as any);
 
     svc.onApplicationBootstrap();
-    await new Promise(r => setImmediate(r));
     expect(typeof tick).toBe('function');
 
     const runBackupSpy = vi.spyOn(svc as any, 'runBackup').mockImplementation(async () => {});
@@ -248,6 +260,7 @@ describe('BackupService — INFRA-07', () => {
     expect(runBackupSpy).toHaveBeenCalledTimes(1);
 
     intervalSpy.mockRestore();
+    immediateSpy.mockRestore();
     runBackupSpy.mockRestore();
     svc.onModuleDestroy();
     db.close();
