@@ -64,4 +64,53 @@ export const migrations: Migration[] = [
     name: 'transcript_model',
     sql: `ALTER TABLE entries ADD COLUMN transcript_model TEXT;`,
   },
+  {
+    version: 5,
+    name: 'entries_vec',
+    sql: `CREATE VIRTUAL TABLE IF NOT EXISTS entries_vec USING vec0(embedding FLOAT[768]);`,
+  },
+  {
+    version: 6,
+    name: 'embedding_model',
+    sql: `
+      ALTER TABLE entries ADD COLUMN embedding_model TEXT;
+      UPDATE entries SET embedding_model = 'nomic-embed-text' WHERE embedding IS NOT NULL;
+    `,
+  },
+  {
+    version: 7,
+    name: 'peaks_path',
+    sql: `ALTER TABLE entries ADD COLUMN peaks_path TEXT;`,
+  },
+  {
+    version: 8,
+    name: 'entries_fts',
+    sql: `
+      CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
+        title, body, transcript, tags, place_name, music_title, music_artist,
+        content='entries', content_rowid='rowid',
+        tokenize="unicode61 remove_diacritics 2"
+      );
+
+      CREATE TRIGGER IF NOT EXISTS entries_ai AFTER INSERT ON entries BEGIN
+        INSERT INTO entries_fts(rowid, title, body, transcript, tags, place_name, music_title, music_artist)
+        VALUES (new.rowid, new.title, new.body, new.transcript, new.tags, new.place_name, new.music_title, new.music_artist);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS entries_ad AFTER DELETE ON entries BEGIN
+        INSERT INTO entries_fts(entries_fts, rowid, title, body, transcript, tags, place_name, music_title, music_artist)
+        VALUES('delete', old.rowid, old.title, old.body, old.transcript, old.tags, old.place_name, old.music_title, old.music_artist);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS entries_au AFTER UPDATE ON entries BEGIN
+        INSERT INTO entries_fts(entries_fts, rowid, title, body, transcript, tags, place_name, music_title, music_artist)
+        VALUES('delete', old.rowid, old.title, old.body, old.transcript, old.tags, old.place_name, old.music_title, old.music_artist);
+        INSERT INTO entries_fts(rowid, title, body, transcript, tags, place_name, music_title, music_artist)
+        VALUES (new.rowid, new.title, new.body, new.transcript, new.tags, new.place_name, new.music_title, new.music_artist);
+      END;
+
+      INSERT INTO entries_fts(rowid, title, body, transcript, tags, place_name, music_title, music_artist)
+      SELECT rowid, title, body, transcript, tags, place_name, music_title, music_artist FROM entries;
+    `,
+  },
 ];
