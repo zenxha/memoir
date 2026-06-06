@@ -5,6 +5,7 @@ import { DbModule } from './db/db.module';
 import { EntriesModule } from './entries/entries.module';
 import { MediaModule } from './media/media.module';
 import { EventsModule } from './events/events.module';
+import { BackupService } from './services/backup.service';
 import { LastfmService } from './services/lastfm.service';
 import { SyncthingService } from './services/syncthing.service';
 import { LocationModule } from './location/location.module';
@@ -22,7 +23,7 @@ import { MusicController } from './music/music.controller';
     EventsModule,
     LocationModule,
   ],
-  providers:   [LastfmService, SyncthingService],
+  providers:   [LastfmService, SyncthingService, BackupService],
   controllers: [MusicController],
 })
 export class AppModule {}
