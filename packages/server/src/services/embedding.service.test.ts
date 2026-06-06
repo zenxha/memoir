@@ -263,20 +263,23 @@ describe('EmbeddingService — Ollama-down backoff (Pitfall 8)', () => {
 
     const svc = bootService(db);
 
-    // Capture setTimeout delays the worker requests.
+    // Capture setTimeout delays the worker requests. After we see a >=1h delay
+    // (the circuit-break signal), flip `enabled=false` so the worker exits its
+    // while loop on the next iteration — otherwise it spins forever in tests.
     const delays: number[] = [];
     const realSetTimeout = global.setTimeout;
     const setTimeoutSpy = vi
       .spyOn(global, 'setTimeout')
       .mockImplementation((fn: any, delay?: number) => {
         delays.push(delay ?? 0);
+        if ((delay ?? 0) >= 3_600_000) (svc as any).enabled = false;
         // Don't actually wait — invoke immediately so the worker progresses.
         return realSetTimeout(fn, 0) as any;
       });
     const warnSpy = vi.spyOn((svc as any).log, 'warn').mockImplementation(() => {});
 
     // Every generate() returns null (mock fetch with non-ok / missing embedding).
-    // We arrange enough rejections to cover at least 11 attempts.
+    // We arrange more than 10 rejections to cover the circuit-break trip.
     for (let i = 0; i < 30; i++) {
       mockFetch.mockResolvedValueOnce({
         ok: false,
