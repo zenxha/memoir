@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import * as path from 'path';
-import * as fs from 'fs';
 import sharp from 'sharp';
 import { DbService } from '../db/db.service';
 import { WhisperService } from '../services/whisper.service';
+import type { MediaStore } from './media-store';
 
 const MEDIA_DIR = process.env.MEMOIR_DATA_DIR
   ? path.resolve(process.env.MEMOIR_DATA_DIR, 'media')
@@ -14,6 +14,7 @@ export class MediaService {
   constructor(
     private readonly db: DbService,
     private readonly whisper: WhisperService,
+    @Inject('MediaStore') private readonly store: MediaStore,
   ) {}
 
   async processUpload(file: Express.Multer.File, entryId?: string): Promise<{ path: string; thumb: string | null }> {
@@ -23,7 +24,8 @@ export class MediaService {
     if (file.mimetype.startsWith('image/')) {
       const thumbName = `thumb_${file.filename.replace(/\.[^.]+$/, '.jpg')}`;
       try {
-        await sharp(file.path).rotate().resize(400).jpeg({ quality: 75 }).toFile(path.join(MEDIA_DIR, thumbName));
+        const thumbBuf = await sharp(file.path).rotate().resize(400).jpeg({ quality: 75 }).toBuffer();
+        await this.store.write(thumbName, thumbBuf);
         thumb = `media/${thumbName}`;
       } catch { /* non-fatal */ }
     }
@@ -39,11 +41,13 @@ export class MediaService {
     return { path: relativePath, thumb };
   }
 
+  // Used by MediaController.serveFile for res.sendFile (which needs an absolute path).
+  // All other I/O goes through `this.store`.
   getFilePath(filename: string): string {
     return path.join(MEDIA_DIR, filename);
   }
 
-  exists(filename: string): boolean {
-    return fs.existsSync(this.getFilePath(filename));
+  async exists(filename: string): Promise<boolean> {
+    return this.store.exists(`media/${filename}`);
   }
 }
