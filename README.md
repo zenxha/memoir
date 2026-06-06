@@ -17,13 +17,14 @@ All data stays on your machine. No accounts, no cloud sync, no analytics.
 ## Prerequisites
 
 ```bash
-brew install node pnpm ffmpeg whisper-cpp
+brew install node pnpm ffmpeg whisper-cpp audiowaveform
 npm i -g pnpm   # if not already
 ```
 
 - **Node 20+**
 - **ffmpeg** — audio conversion for Whisper
 - **whisper-cpp** — local speech transcription
+- **audiowaveform** — generates waveform peaks for audio playback (Phase 5 audio wall). Linux: see https://github.com/bbc/audiowaveform#installation
 - **Mapbox token** — free account at mapbox.com, required for the globe
 
 ## Quick start
