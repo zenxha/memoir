@@ -33,8 +33,8 @@ export class MediaController {
   }
 
   @Get(':filename')
-  serveFile(@Param('filename') filename: string, @Res() res: Response) {
-    if (!this.media.exists(filename)) throw new NotFoundException();
+  async serveFile(@Param('filename') filename: string, @Res() res: Response) {
+    if (!(await this.media.exists(filename))) throw new NotFoundException();
     res.sendFile(this.media.getFilePath(filename));
   }
 }
