@@ -32,6 +32,19 @@ export class MediaController {
     return this.media.processUpload(file, entryId);
   }
 
+  // NOTE: Route order matters — NestJS resolves @Get(...) routes in declaration
+  // order. The specific `peaks/:entryId` path MUST precede the catch-all
+  // `:filename` route below, otherwise a request for /api/media/peaks/<id>
+  // matches `:filename = "peaks"` and fails an exists("peaks") check on a
+  // directory (Pitfall 3, plan 04-04).
+  @Get('peaks/:entryId')
+  async servePeaks(@Param('entryId') entryId: string, @Res() res: Response) {
+    if (!/^[0-9a-zA-Z_-]+$/.test(entryId)) throw new NotFoundException();
+    const rel = `peaks/${entryId}.json`;
+    if (!(await this.media.exists(rel))) throw new NotFoundException();
+    res.sendFile(this.media.getFilePath(rel));
+  }
+
   @Get(':filename')
   async serveFile(@Param('filename') filename: string, @Res() res: Response) {
     if (!(await this.media.exists(filename))) throw new NotFoundException();

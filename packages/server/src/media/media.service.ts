@@ -3,6 +3,7 @@ import * as path from 'path';
 import sharp from 'sharp';
 import { DbService } from '../db/db.service';
 import { WhisperService } from '../services/whisper.service';
+import { PeaksService } from '../services/peaks.service';
 import type { MediaStore } from './media-store';
 
 const MEDIA_DIR = process.env.MEMOIR_DATA_DIR
@@ -14,6 +15,7 @@ export class MediaService {
   constructor(
     private readonly db: DbService,
     private readonly whisper: WhisperService,
+    private readonly peaks: PeaksService,
     @Inject('MediaStore') private readonly store: MediaStore,
   ) {}
 
@@ -36,6 +38,7 @@ export class MediaService {
 
       const isAudio = file.mimetype.startsWith('audio/') || file.mimetype === 'video/mp4';
       if (isAudio) this.whisper.transcribeAsync(entryId, relativePath);
+      if (isAudio) this.peaks.generateAsync(entryId, relativePath);
     }
 
     return { path: relativePath, thumb };

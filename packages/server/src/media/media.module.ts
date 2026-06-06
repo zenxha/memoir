@@ -3,12 +3,14 @@ import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 import { DiskMediaStore } from './disk-media-store';
 import { WhisperService } from '../services/whisper.service';
+import { PeaksService } from '../services/peaks.service';
 
 @Module({
   controllers: [MediaController],
   providers: [
     MediaService,
     WhisperService,
+    PeaksService,
     { provide: 'MediaStore', useClass: DiskMediaStore },
   ],
 })
